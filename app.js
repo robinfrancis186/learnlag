@@ -8,6 +8,7 @@ class LanguageLearningApp {
         this.initializeSpeechRecognition();
         this.initializeTypingAnimation();
         this.initializeSpeechSynthesis();
+        this.initializeUserProgress();
     }
 
     initializeElements() {
@@ -19,6 +20,14 @@ class LanguageLearningApp {
         this.isListening = false;
         this.isProcessing = false;
         this.lastSpokenText = '';
+        this.learningHistory = [];
+        this.currentSession = {
+            startTime: new Date(),
+            interactions: 0,
+            correctUses: 0,
+            mistakes: [],
+            practicedPhrases: new Set()
+        };
     }
 
     initializeSpeechSynthesis() {
@@ -208,25 +217,156 @@ class LanguageLearningApp {
         this.synth.speak(utterance);
     }
 
+    initializeUserProgress() {
+        // Load user progress from localStorage
+        const savedProgress = localStorage.getItem('learningProgress');
+        if (savedProgress) {
+            this.userProgress = JSON.parse(savedProgress);
+        } else {
+            this.userProgress = {
+                languages: {},
+                lastSession: null,
+                commonMistakes: {},
+                strengthAreas: {},
+                weakAreas: {},
+                vocabulary: {},
+                streak: 0,
+                lastPracticeDate: null
+            };
+        }
+
+        // Initialize progress for current language if not exists
+        const currentLang = this.targetLanguage.value;
+        if (!this.userProgress.languages[currentLang]) {
+            this.userProgress.languages[currentLang] = {
+                level: 'beginner',
+                vocabularySize: 0,
+                grammarAccuracy: 0,
+                pronunciationScore: 0,
+                practiceHistory: []
+            };
+        }
+
+        // Update streak
+        this.updateStreak();
+    }
+
+    updateStreak() {
+        const today = new Date().toDateString();
+        if (this.userProgress.lastPracticeDate) {
+            const lastPractice = new Date(this.userProgress.lastPracticeDate).toDateString();
+            const yesterday = new Date(Date.now() - 86400000).toDateString();
+            
+            if (today === lastPractice) {
+                // Already practiced today
+                return;
+            } else if (yesterday === lastPractice) {
+                // Practiced yesterday, increment streak
+                this.userProgress.streak++;
+            } else {
+                // Streak broken
+                this.userProgress.streak = 1;
+            }
+        } else {
+            // First time practicing
+            this.userProgress.streak = 1;
+        }
+        
+        this.userProgress.lastPracticeDate = today;
+        this.saveProgress();
+
+        if (this.userProgress.streak > 1) {
+            this.addMessage(`🔥 ${this.userProgress.streak} day streak! Keep it up!`, 'ai');
+        }
+    }
+
+    saveProgress() {
+        localStorage.setItem('learningProgress', JSON.stringify(this.userProgress));
+    }
+
+    updateLanguageProgress(response, userMessage, isCorrect = true) {
+        const currentLang = this.targetLanguage.value;
+        const langProgress = this.userProgress.languages[currentLang];
+
+        // Update vocabulary
+        const words = userMessage.toLowerCase().split(/\s+/);
+        words.forEach(word => {
+            if (!this.userProgress.vocabulary[word]) {
+                this.userProgress.vocabulary[word] = {
+                    firstSeen: new Date(),
+                    timesUsed: 1,
+                    correctUses: isCorrect ? 1 : 0,
+                    lastUsed: new Date()
+                };
+            } else {
+                this.userProgress.vocabulary[word].timesUsed++;
+                if (isCorrect) this.userProgress.vocabulary[word].correctUses++;
+                this.userProgress.vocabulary[word].lastUsed = new Date();
+            }
+        });
+
+        // Update practice history
+        langProgress.practiceHistory.push({
+            timestamp: new Date(),
+            message: userMessage,
+            response: response,
+            isCorrect: isCorrect
+        });
+
+        // Limit history size
+        if (langProgress.practiceHistory.length > 100) {
+            langProgress.practiceHistory = langProgress.practiceHistory.slice(-100);
+        }
+
+        // Update scores
+        const recentHistory = langProgress.practiceHistory.slice(-10);
+        langProgress.grammarAccuracy = recentHistory.filter(h => h.isCorrect).length / recentHistory.length;
+        
+        this.saveProgress();
+    }
+
     async getAIResponse(userMessage, targetLanguage, isVoiceInput) {
         try {
             this.isProcessing = true;
             this.showTypingIndicator();
 
-            const prompt = `You are a helpful language learning assistant. The user is learning ${targetLanguage}. 
-                          ${isVoiceInput ? "The user spoke this message, so please pay special attention to pronunciation feedback. " : ""}
+            // Get user's learning history and progress
+            const currentLang = this.targetLanguage.value;
+            const langProgress = this.userProgress.languages[currentLang];
+            const recentPractice = langProgress.practiceHistory.slice(-5).map(h => h.message);
+            const commonMistakes = Object.entries(this.userProgress.commonMistakes)
+                .filter(([key, value]) => value > 2)
+                .map(([key]) => key);
+
+            const prompt = `You are an adaptive language learning assistant. The user is learning ${targetLanguage}.
+                          User's current level: ${langProgress.level}
+                          Recent practice: ${JSON.stringify(recentPractice)}
+                          Common mistakes: ${JSON.stringify(commonMistakes)}
+                          Learning streak: ${this.userProgress.streak} days
+                          
+                          ${isVoiceInput ? "The user spoke this message, so please pay special attention to pronunciation feedback." : ""}
                           
                           Instructions:
                           1. If the message is in English:
                              - Provide the translation
                              - Add pronunciation guide using IPA
-                             - Give a simple example of usage
-                          2. If the message is in ${targetLanguage}:
-                             - Correct any grammar or pronunciation mistakes
-                             - Explain the corrections in English
-                             - Suggest alternative phrases if applicable
+                             - Give a contextual example based on user's level
+                             - Suggest related vocabulary or phrases to expand learning
                           
-                          Keep responses concise and friendly. Format the response clearly with bullet points or sections.
+                          2. If the message is in ${targetLanguage}:
+                             - Identify and correct any mistakes
+                             - Provide detailed feedback on grammar and pronunciation
+                             - Explain corrections in English
+                             - Suggest alternative expressions
+                             - If no mistakes, praise and encourage
+                          
+                          3. Adaptive Learning:
+                             - If user shows mastery, introduce more complex variations
+                             - If user struggles, provide simpler alternatives
+                             - Reference past corrections if similar mistakes occur
+                          
+                          Format the response clearly with sections and bullet points.
+                          Keep the tone encouraging and friendly.
                           
                           User message: ${userMessage}`;
 
@@ -251,12 +391,16 @@ class LanguageLearningApp {
             const data = await response.json();
             const aiResponse = data.candidates[0].content.parts[0].text;
             
+            // Update learning progress
+            const isCorrect = !aiResponse.toLowerCase().includes('correction') && 
+                            !aiResponse.toLowerCase().includes('mistake');
+            this.updateLanguageProgress(aiResponse, userMessage, isCorrect);
+
             this.removeTypingIndicator();
             this.addMessage(aiResponse, 'ai');
 
             // Automatically speak the translation or correction
             if (isVoiceInput) {
-                // Extract the translation/correction (first line after a bullet point or number)
                 const firstLine = aiResponse.split('\n').find(line => 
                     line.trim().startsWith('•') || line.trim().startsWith('-') || /^\d+\./.test(line.trim())
                 );
@@ -265,12 +409,59 @@ class LanguageLearningApp {
                     setTimeout(() => this.speakText(textToSpeak, targetLanguage), 1000);
                 }
             }
+
+            // Suggest next practice if appropriate
+            if (this.currentSession.interactions % 5 === 0) {
+                this.suggestNextPractice();
+            }
+
         } catch (error) {
             console.error('Error:', error);
             this.removeTypingIndicator();
             this.addMessage('Sorry, I encountered an error. Please try again.', 'ai');
         } finally {
             this.isProcessing = false;
+            this.currentSession.interactions++;
+        }
+    }
+
+    async suggestNextPractice() {
+        const currentLang = this.targetLanguage.value;
+        const langProgress = this.userProgress.languages[currentLang];
+        
+        // Create a prompt for practice suggestion
+        const prompt = `Based on the user's progress:
+                       Level: ${langProgress.level}
+                       Grammar Accuracy: ${langProgress.grammarAccuracy * 100}%
+                       Recent practice: ${JSON.stringify(langProgress.practiceHistory.slice(-3))}
+                       
+                       Suggest a relevant practice exercise or topic to focus on next.
+                       Keep it short, friendly, and motivating.`;
+
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const suggestion = data.candidates[0].content.parts[0].text;
+                setTimeout(() => {
+                    this.addMessage(`💡 ${suggestion}`, 'ai');
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error suggesting practice:', error);
         }
     }
 
