@@ -1,0 +1,137 @@
+:root {
+    --primary-color: #4A90E2;
+    --secondary-color: #2C3E50;
+    --background-color: #F5F7FA;
+    --text-color: #333333;
+    --border-radius: 12px;
+    --spacing: 20px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.app-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--spacing);
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    margin-bottom: var(--spacing);
+    padding: var(--spacing) 0;
+}
+
+h1 {
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+}
+
+.language-selector {
+    margin-bottom: var(--spacing);
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background-color: white;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.interaction-area {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.chat-container {
+    height: 400px;
+    overflow-y: auto;
+    padding: var(--spacing);
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    max-width: 80%;
+}
+
+.user-message {
+    background-color: var(--primary-color);
+    color: white;
+    margin-left: auto;
+}
+
+.ai-message {
+    background-color: #E8E8E8;
+    margin-right: auto;
+}
+
+.input-container {
+    display: flex;
+    padding: 15px;
+    border-top: 1px solid #E8E8E8;
+    gap: 10px;
+}
+
+#userInput {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #E8E8E8;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+}
+
+.voice-button, .send-button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.voice-button:hover, .send-button:hover {
+    background-color: #357ABD;
+}
+
+.mic-icon {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 600px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    .chat-container {
+        height: 350px;
+    }
+} 
