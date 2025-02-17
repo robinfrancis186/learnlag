@@ -521,17 +521,13 @@ class LanguageLearningApp {
             const yesterday = new Date(Date.now() - 86400000).toDateString();
             
             if (today === lastPractice) {
-                // Already practiced today
                 return;
             } else if (yesterday === lastPractice) {
-                // Practiced yesterday, increment streak
                 this.userProgress.streak++;
             } else {
-                // Streak broken
                 this.userProgress.streak = 1;
             }
         } else {
-            // First time practicing
             this.userProgress.streak = 1;
         }
         
@@ -539,7 +535,7 @@ class LanguageLearningApp {
         this.saveProgress();
 
         if (this.userProgress.streak > 1) {
-            this.addMessage(`🔥 ${this.userProgress.streak} day streak! Keep it up!`, 'ai');
+            this.addMessage(`${this.userProgress.streak} day streak.`, 'ai');
         }
     }
 
@@ -914,26 +910,11 @@ class LanguageLearningApp {
             achievement.earned = true;
             this.achievements.add(achievementId);
             
-            // Save earned achievements
             localStorage.setItem('achievements', 
                 JSON.stringify([...this.achievements]));
             
-            // Show achievement notification
-            this.addMessage(`🏆 Achievement Unlocked: ${achievement.title}\n${achievement.description}`, 'ai');
-            
-            // Add celebration animation
-            this.celebrateAchievement();
+            this.addMessage(`Achievement: ${achievement.title}\n${achievement.description}`, 'ai');
         }
-    }
-
-    celebrateAchievement() {
-        const celebration = document.createElement('div');
-        celebration.className = 'achievement-celebration';
-        document.body.appendChild(celebration);
-        
-        setTimeout(() => {
-            document.body.removeChild(celebration);
-        }, 3000);
     }
 
     updateDailyGoals(userMessage, aiResponse, isVoiceInput) {
@@ -1005,9 +986,6 @@ class LanguageLearningApp {
         this.userProgress.languages[currentLang].xp += amount;
         this.saveProgress();
         
-        // Show XP gain
-        this.addMessage(`✨ +${amount} XP`, 'ai');
-        
         // Check for level up
         this.checkLevelUp();
     }
@@ -1034,7 +1012,7 @@ class LanguageLearningApp {
         if (newLevel !== langProgress.level) {
             langProgress.level = newLevel;
             this.saveProgress();
-            this.addMessage(`🎊 Level Up! You're now at ${newLevel} level!`, 'ai');
+            this.addMessage(`You've reached ${newLevel} level.`, 'ai');
         }
     }
 
