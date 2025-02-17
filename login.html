@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnLag - Login</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192x192.png">
+    <meta name="theme-color" content="#7C3AED">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>LearnLag</h1>
+                <p class="subtitle">Your AI Language Learning Assistant</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+
+            <div class="auth-form-container">
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="auth-button">Login</button>
+                    <div class="auth-links">
+                        <a href="#" id="forgotPassword">Forgot Password?</a>
+                    </div>
+                </form>
+
+                <form id="signupForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="signupName">Full Name</label>
+                        <input type="text" id="signupName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupEmail">Email</label>
+                        <input type="email" id="signupEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupConfirmPassword">Confirm Password</label>
+                        <input type="password" id="signupConfirmPassword" required>
+                    </div>
+                    <button type="submit" class="auth-button">Sign Up</button>
+                </form>
+            </div>
+
+            <div class="social-auth">
+                <p>Or continue with</p>
+                <div class="social-buttons">
+                    <button class="social-button google">
+                        <img src="icons/google.svg" alt="Google">
+                        Google
+                    </button>
+                    <button class="social-button apple">
+                        <img src="icons/apple.svg" alt="Apple">
+                        Apple
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html> 

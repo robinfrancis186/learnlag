@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnLag - Profile</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192x192.png">
+    <meta name="theme-color" content="#7C3AED">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="profile-nav">
+            <a href="index.html" class="nav-back">
+                <span class="material-icons-round">arrow_back</span>
+                Back to Learning
+            </a>
+            <button id="logoutButton" class="nav-logout">
+                <span class="material-icons-round">logout</span>
+                Logout
+            </button>
+        </nav>
+
+        <main class="profile-main">
+            <div class="profile-header">
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <span class="material-icons-round">account_circle</span>
+                    </div>
+                    <div class="profile-details">
+                        <h1 id="userName">Loading...</h1>
+                        <p id="userEmail">loading@email.com</p>
+                    </div>
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalXP">0</span>
+                        <span class="stat-label">Total XP</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="currentStreak">0</span>
+                        <span class="stat-label">Day Streak</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="wordsLearned">0</span>
+                        <span class="stat-label">Words Learned</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-content">
+                <section class="progress-section">
+                    <h2>Language Progress</h2>
+                    <div class="language-progress" id="languageProgress">
+                        <!-- Language progress cards will be inserted here -->
+                    </div>
+                </section>
+
+                <section class="achievements-section">
+                    <h2>Achievements</h2>
+                    <div class="achievements-grid" id="achievementsGrid">
+                        <!-- Achievement cards will be inserted here -->
+                    </div>
+                </section>
+
+                <section class="learning-stats">
+                    <h2>Learning Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Study Time</h3>
+                            <div class="stat-chart" id="studyTimeChart"></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Accuracy</h3>
+                            <div class="stat-chart" id="accuracyChart"></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Vocabulary Growth</h3>
+                            <div class="stat-chart" id="vocabularyChart"></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Practice Distribution</h3>
+                            <div class="stat-chart" id="practiceChart"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="flashcards-section">
+                    <h2>Flashcard Progress</h2>
+                    <div class="flashcard-stats">
+                        <div class="flashcard-stat">
+                            <span class="stat-value" id="totalCards">0</span>
+                            <span class="stat-label">Total Cards</span>
+                        </div>
+                        <div class="flashcard-stat">
+                            <span class="stat-value" id="masteredCards">0</span>
+                            <span class="stat-label">Mastered</span>
+                        </div>
+                        <div class="flashcard-stat">
+                            <span class="stat-value" id="reviewingCards">0</span>
+                            <span class="stat-label">Reviewing</span>
+                        </div>
+                        <div class="flashcard-stat">
+                            <span class="stat-value" id="newCards">0</span>
+                            <span class="stat-label">New</span>
+                        </div>
+                    </div>
+                    <div class="review-schedule">
+                        <h3>Upcoming Reviews</h3>
+                        <div id="reviewTimeline" class="review-timeline">
+                            <!-- Review timeline will be inserted here -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="profile.js"></script>
+</body>
+</html> 

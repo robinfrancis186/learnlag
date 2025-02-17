@@ -80,7 +80,26 @@ class LanguageLearningApp {
     initializeTypingAnimation() {
         this.typingIndicator = document.createElement('div');
         this.typingIndicator.className = 'message ai-message typing-indicator';
-        this.typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+        
+        // Create boxes loading animation
+        const boxesContainer = document.createElement('div');
+        boxesContainer.className = 'boxes';
+        
+        // Create 4 boxes
+        for (let i = 0; i < 4; i++) {
+            const box = document.createElement('div');
+            box.className = 'box';
+            
+            // Create 4 sides for each box
+            for (let j = 0; j < 4; j++) {
+                const side = document.createElement('div');
+                box.appendChild(side);
+            }
+            
+            boxesContainer.appendChild(box);
+        }
+        
+        this.typingIndicator.appendChild(boxesContainer);
     }
 
     initializeSpeechRecognition() {
@@ -138,16 +157,16 @@ class LanguageLearningApp {
 
     initializeLanguages() {
         this.supportedLanguages = {
-            'es': {
-                name: 'Spanish',
-                flag: '🇪🇸',
-                code: 'es-ES',
+            'en': {
+                name: 'English',
+                flag: '🇬🇧',
+                code: 'en-GB',
                 commonPhrases: {
-                    greeting: '¡Hola!',
-                    goodbye: '¡Adiós!',
-                    thanks: '¡Gracias!'
+                    greeting: 'Hello!',
+                    goodbye: 'Goodbye!',
+                    thanks: 'Thank you!'
                 },
-                grammarRules: ['Use "ser" for permanent characteristics', 'Use "estar" for temporary states']
+                grammarRules: ['Use present perfect for past actions with present effects', 'Use "will" for future predictions']
             },
             'fr': {
                 name: 'French',
@@ -170,17 +189,6 @@ class LanguageLearningApp {
                     thanks: 'Danke!'
                 },
                 grammarRules: ['Verbs go at the end in dependent clauses', 'Nouns are capitalized']
-            },
-            'it': {
-                name: 'Italian',
-                flag: '🇮🇹',
-                code: 'it-IT',
-                commonPhrases: {
-                    greeting: 'Ciao!',
-                    goodbye: 'Arrivederci!',
-                    thanks: 'Grazie!'
-                },
-                grammarRules: ['Use "essere" for states', 'Use "avere" for possession']
             }
         };
 
@@ -424,24 +432,52 @@ class LanguageLearningApp {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
-    speakText(text, targetLanguage) {
-        if (!this.synth) return;
-
-        // Cancel any ongoing speech
-        this.synth.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = this.getLanguageCode(targetLanguage);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-
-        // Find the best voice for the language
-        const voices = this.voices.filter(voice => voice.lang.startsWith(this.getLanguageCode(targetLanguage)));
-        if (voices.length > 0) {
-            utterance.voice = voices[0];
+    speakText(text, languageCode) {
+        if (!('speechSynthesis' in window)) {
+            console.warn('Speech synthesis not supported');
+            return;
         }
 
-        this.synth.speak(utterance);
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Set language and voice preferences
+        utterance.lang = languageCode;
+        utterance.rate = 0.9; // Slightly slower for better clarity
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        // Get the appropriate voice for the language
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(voice => 
+            voice.lang.startsWith(languageCode) && voice.localService
+        ) || voices.find(voice => 
+            voice.lang.startsWith(languageCode)
+        );
+
+        if (preferredVoice) {
+            utterance.voice = preferredVoice;
+        }
+
+        // Ensure voices are loaded
+        if (voices.length === 0) {
+            window.speechSynthesis.addEventListener('voiceschanged', () => {
+                const updatedVoices = window.speechSynthesis.getVoices();
+                const voice = updatedVoices.find(v => 
+                    v.lang.startsWith(languageCode) && v.localService
+                ) || updatedVoices.find(v => 
+                    v.lang.startsWith(languageCode)
+                );
+                if (voice) {
+                    utterance.voice = voice;
+                }
+                window.speechSynthesis.speak(utterance);
+            }, { once: true });
+        } else {
+            window.speechSynthesis.speak(utterance);
+        }
     }
 
     initializeUserProgress() {
@@ -585,25 +621,16 @@ class LanguageLearningApp {
                           
                           Instructions:
                           1. If the message is in English:
-                             - Provide the translation
-                             - Add pronunciation guide using IPA
-                             - Give a contextual example based on user's level
-                             - Suggest related vocabulary or phrases
-                             - Explain any relevant grammar rules
+                             - Start with the translation
+                             - Then provide additional details (pronunciation, examples, etc.)
                           
                           2. If the message is in ${targetLangInfo.name}:
-                             - Identify and correct any mistakes
-                             - Provide detailed feedback on grammar and pronunciation
-                             - Explain corrections in English
-                             - Suggest alternative expressions
-                             - If no mistakes, praise and encourage
+                             - Start with corrections or confirmation
+                             - Then provide additional feedback
                           
-                          3. Cultural Context:
-                             - Include relevant cultural notes
-                             - Explain idiomatic expressions
-                             - Suggest appropriate usage contexts
+                          3. Keep the first line as the main response that should be spoken.
                           
-                          Format the response clearly with sections and bullet points.
+                          Format the response with the main response in the first line, followed by additional details.
                           Keep the tone encouraging and friendly.
                           
                           User message: ${userMessage}`;
@@ -637,15 +664,10 @@ class LanguageLearningApp {
             this.removeTypingIndicator();
             this.addMessage(aiResponse, 'ai');
 
-            // Automatically speak the translation or correction
-            if (isVoiceInput) {
-                const firstLine = aiResponse.split('\n').find(line => 
-                    line.trim().startsWith('•') || line.trim().startsWith('-') || /^\d+\./.test(line.trim())
-                );
-                if (firstLine) {
-                    const textToSpeak = firstLine.replace(/^[•\-\d\.\s]+/, '').trim();
-                    setTimeout(() => this.speakText(textToSpeak, targetLanguage), 1000);
-                }
+            // Immediately speak the first line of the response
+            const firstLine = aiResponse.split('\n')[0].trim();
+            if (firstLine) {
+                this.speakText(firstLine, this.targetLanguage.value);
             }
 
             // Suggest next practice if appropriate

@@ -4,28 +4,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LearnLag - Language Learning Assistant</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="AI-powered language learning assistant with adaptive learning and voice coaching">
+    <meta name="theme-color" content="#7C3AED">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LearnLag">
+    
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Critical CSS -->
+    <link rel="preload" as="style" href="styles.css">
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- PWA Assets -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icons/icon-192x192.png">
-    <meta name="theme-color" content="#7C3AED">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1>LearnLag</h1>
-            <p class="subtitle">Your AI Language Learning Assistant</p>
+            <div class="header-content">
+                <h1>LearnLag</h1>
+                <p class="subtitle">Your AI Language Learning Assistant</p>
+            </div>
+            <div class="header-actions">
+                <a href="profile.html" class="profile-link" title="View Profile">
+                    <span class="material-icons-round">account_circle</span>
+                    <span class="username" id="headerUsername">Loading...</span>
+                </a>
+                <button id="headerLogout" class="logout-button" title="Logout">
+                    <span class="material-icons-round">logout</span>
+                </button>
+            </div>
         </header>
+
+        <!-- Install prompt banner -->
+        <div id="installBanner" class="install-banner" style="display: none;">
+            <p>Install LearnLag for a better experience!</p>
+            <button id="installButton" class="install-button">Install App</button>
+            <button id="closeBanner" class="close-banner">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
 
         <main>
             <div class="language-selector">
-                <select id="targetLanguage">
-                    <option value="es">🇪🇸 Spanish</option>
-                    <option value="fr">🇫🇷 French</option>
-                    <option value="de">🇩🇪 German</option>
-                    <option value="it">🇮🇹 Italian</option>
-                </select>
+                <div class="language-header">
+                    <h2>Choose Your Learning Path</h2>
+                    <p>Select your target language and proficiency level</p>
+                </div>
+                <div class="language-options">
+                    <div class="language-select-group">
+                        <label for="targetLanguage">Target Language</label>
+                        <select id="targetLanguage">
+                            <option value="en">🇬🇧 English</option>
+                            <option value="de">🇩🇪 German</option>
+                            <option value="fr">🇫🇷 French</option>
+                        </select>
+                    </div>
+                    <div class="language-select-group">
+                        <label for="proficiencyLevel">Proficiency Level</label>
+                        <select id="proficiencyLevel">
+                            <option value="beginner">Beginner (A1-A2)</option>
+                            <option value="intermediate">Intermediate (B1-B2)</option>
+                            <option value="advanced">Advanced (C1-C2)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="learning-preferences">
+                    <h3>Learning Preferences</h3>
+                    <div class="preference-options">
+                        <label class="preference-checkbox">
+                            <input type="checkbox" id="immersiveMode">
+                            <span>Immersive Mode (Responses only in target language)</span>
+                        </label>
+                        <label class="preference-checkbox">
+                            <input type="checkbox" id="culturalContext">
+                            <span>Include Cultural Context</span>
+                        </label>
+                        <label class="preference-checkbox">
+                            <input type="checkbox" id="pronunciationFocus">
+                            <span>Focus on Pronunciation</span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="interaction-area">
@@ -48,12 +119,187 @@
         </main>
     </div>
 
+    <script src="languages.js"></script>
     <script src="app.js"></script>
     <script>
+        // PWA Install prompt
+        let deferredPrompt;
+        const installBanner = document.getElementById('installBanner');
+        const installButton = document.getElementById('installButton');
+        const closeBanner = document.getElementById('closeBanner');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBanner.style.display = 'flex';
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('App installed');
+                }
+                deferredPrompt = null;
+                installBanner.style.display = 'none';
+            }
+        });
+
+        closeBanner.addEventListener('click', () => {
+            installBanner.style.display = 'none';
+        });
+
+        // Check authentication
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Initialize language handler
+            const languageHandler = new LanguageHandler();
+            const targetLanguage = document.getElementById('targetLanguage');
+            const proficiencyLevel = document.getElementById('proficiencyLevel');
+            const immersiveMode = document.getElementById('immersiveMode');
+            const culturalContext = document.getElementById('culturalContext');
+            const pronunciationFocus = document.getElementById('pronunciationFocus');
+            
+            // Set initial message in selected language
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = `<div class="message ai-message">${languageHandler.getMessage('welcome')}</div>`;
+            
+            // Handle language changes
+            targetLanguage.addEventListener('change', (e) => {
+                languageHandler.setLanguage(e.target.value);
+                updateChatWithWelcome();
+            });
+
+            // Handle proficiency level changes
+            proficiencyLevel.addEventListener('change', (e) => {
+                languageHandler.setProficiencyLevel(e.target.value);
+                updateChatWithWelcome();
+            });
+
+            // Handle preference changes
+            const preferenceInputs = [immersiveMode, culturalContext, pronunciationFocus];
+            preferenceInputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    languageHandler.setPreferences({
+                        immersiveMode: immersiveMode.checked,
+                        culturalContext: culturalContext.checked,
+                        pronunciationFocus: pronunciationFocus.checked
+                    });
+                    updateChatWithWelcome();
+                });
+            });
+
+            function updateChatWithWelcome() {
+                const welcomeMessage = languageHandler.getResponse('', { responseType: 'welcome' });
+                chatContainer.innerHTML = `<div class="message ai-message">${welcomeMessage}</div>`;
+            }
+
+            // Load saved preferences
+            const savedPreferences = localStorage.getItem('languagePreferences');
+            if (savedPreferences) {
+                const prefs = JSON.parse(savedPreferences);
+                targetLanguage.value = prefs.language || 'en';
+                proficiencyLevel.value = prefs.level || 'beginner';
+                immersiveMode.checked = prefs.immersive || false;
+                culturalContext.checked = prefs.cultural || false;
+                pronunciationFocus.checked = prefs.pronunciation || false;
+                
+                languageHandler.setLanguage(prefs.language || 'en');
+                languageHandler.setProficiencyLevel(prefs.level || 'beginner');
+                languageHandler.setPreferences({
+                    immersiveMode: prefs.immersive || false,
+                    culturalContext: prefs.cultural || false,
+                    pronunciationFocus: prefs.pronunciation || false
+                });
+            }
+
+            // Save preferences on change
+            function savePreferences() {
+                const prefs = {
+                    language: targetLanguage.value,
+                    level: proficiencyLevel.value,
+                    immersive: immersiveMode.checked,
+                    cultural: culturalContext.checked,
+                    pronunciation: pronunciationFocus.checked
+                };
+                localStorage.setItem('languagePreferences', JSON.stringify(prefs));
+            }
+
+            [targetLanguage, proficiencyLevel, ...preferenceInputs].forEach(input => {
+                input.addEventListener('change', savePreferences);
+            });
+
+            // Update header username
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const currentUser = users.find(user => user.token === token);
+            if (currentUser) {
+                document.getElementById('headerUsername').textContent = currentUser.name;
+            }
+
+            // Add logout handler
+            document.getElementById('headerLogout').addEventListener('click', () => {
+                localStorage.removeItem('authToken');
+                window.location.href = 'login.html';
+            });
+
+            // Request notification permission
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        registerPushNotifications();
+                    }
+                });
+            }
+        });
+
+        // Service Worker registration
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(registration => console.log('ServiceWorker registered'))
+                .then(registration => {
+                    console.log('ServiceWorker registered');
+                    return registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array('YOUR_VAPID_PUBLIC_KEY')
+                    });
+                })
                 .catch(error => console.log('ServiceWorker registration failed:', error));
+        }
+
+        // Helper function for push notifications
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function registerPushNotifications() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array('YOUR_VAPID_PUBLIC_KEY')
+                });
+                
+                // Send subscription to server
+                console.log('Push Notification Subscription:', subscription);
+            } catch (error) {
+                console.error('Push notification subscription failed:', error);
+            }
         }
     </script>
 </body>
