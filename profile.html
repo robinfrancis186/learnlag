@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#7C3AED">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -130,19 +131,27 @@
                     <div class="stats-grid">
                         <div class="stat-card">
                             <h3>Study Time</h3>
-                            <div class="stat-chart" id="studyTimeChart"></div>
+                            <div class="stat-chart">
+                                <canvas id="studyTimeChart"></canvas>
+                            </div>
                         </div>
                         <div class="stat-card">
                             <h3>Accuracy</h3>
-                            <div class="stat-chart" id="accuracyChart"></div>
+                            <div class="stat-chart">
+                                <canvas id="accuracyChart"></canvas>
+                            </div>
                         </div>
                         <div class="stat-card">
                             <h3>Vocabulary Growth</h3>
-                            <div class="stat-chart" id="vocabularyChart"></div>
+                            <div class="stat-chart">
+                                <canvas id="vocabularyChart"></canvas>
+                            </div>
                         </div>
                         <div class="stat-card">
                             <h3>Practice Distribution</h3>
-                            <div class="stat-chart" id="practiceChart"></div>
+                            <div class="stat-chart">
+                                <canvas id="practiceChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -238,8 +238,6 @@ class Profile {
     }
 
     createCharts(data) {
-        // In a real application, use a charting library like Chart.js
-        // For now, creating simple visualizations
         this.createStudyTimeChart(data);
         this.createAccuracyChart(data);
         this.createVocabularyChart(data);
@@ -247,110 +245,157 @@ class Profile {
     }
 
     createStudyTimeChart(data) {
-        // Simple bar chart showing study time per day
+        const ctx = document.getElementById('studyTimeChart').getContext('2d');
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        this.studyTimeChart.innerHTML = `
-            <div class="chart-bars">
-                ${days.map(day => `
-                    <div class="chart-bar">
-                        <div class="bar-fill" style="height: ${Math.random() * 100}%"></div>
-                        <div class="bar-label">${day}</div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        const studyMinutes = days.map(() => Math.floor(Math.random() * 60 + 30)); // Sample data
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: days,
+                datasets: [{
+                    label: 'Minutes Studied',
+                    data: studyMinutes,
+                    backgroundColor: '#7C3AED',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Minutes'
+                        }
+                    }
+                }
+            }
+        });
     }
 
     createAccuracyChart(data) {
-        // Simple line chart showing accuracy trend
-        const accuracy = Math.random() * 100;
-        this.accuracyChart.innerHTML = `
-            <div class="accuracy-display">
-                <div class="accuracy-circle">
-                    <svg viewBox="0 0 36 36">
-                        <path d="M18 2.0845
-                            a 15.9155 15.9155 0 0 1 0 31.831
-                            a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="#E5E7EB"
-                            stroke-width="3"
-                        />
-                        <path d="M18 2.0845
-                            a 15.9155 15.9155 0 0 1 0 31.831
-                            a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="#7C3AED"
-                            stroke-width="3"
-                            stroke-dasharray="${accuracy}, 100"
-                        />
-                    </svg>
-                    <div class="accuracy-value">${Math.round(accuracy)}%</div>
-                </div>
-            </div>
-        `;
+        const ctx = document.getElementById('accuracyChart').getContext('2d');
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const accuracyData = days.map(() => Math.floor(Math.random() * 30 + 70)); // Sample data
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: days,
+                datasets: [{
+                    label: 'Accuracy %',
+                    data: accuracyData,
+                    borderColor: '#EC4899',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Accuracy %'
+                        }
+                    }
+                }
+            }
+        });
     }
 
     createVocabularyChart(data) {
-        // Simple area chart showing vocabulary growth
-        const vocabulary = Object.keys(data.progress.vocabulary || {}).length;
-        this.vocabularyChart.innerHTML = `
-            <div class="vocabulary-display">
-                <div class="vocabulary-number">${vocabulary}</div>
-                <div class="vocabulary-label">words</div>
-                <div class="growth-indicator">
-                    <span class="material-icons-round">trending_up</span>
-                    +${Math.round(vocabulary * 0.1)} this week
-                </div>
-            </div>
-        `;
+        const ctx = document.getElementById('vocabularyChart').getContext('2d');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const vocabularyData = months.map((_, index) => Math.floor((index + 1) * 50 * (1 + Math.random() * 0.3))); // Sample data
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Words Learned',
+                    data: vocabularyData,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Words'
+                        }
+                    }
+                }
+            }
+        });
     }
 
     createPracticeChart(data) {
-        // Simple donut chart showing practice distribution
-        const categories = [
-            { name: 'Speaking', color: '#7C3AED', value: 35 },
-            { name: 'Writing', color: '#EC4899', value: 25 },
-            { name: 'Reading', color: '#3B82F6', value: 20 },
-            { name: 'Listening', color: '#10B981', value: 20 }
-        ];
+        const ctx = document.getElementById('practiceChart').getContext('2d');
+        const practiceData = {
+            labels: ['Speaking', 'Writing', 'Reading', 'Listening'],
+            datasets: [{
+                data: [35, 25, 20, 20],
+                backgroundColor: [
+                    '#7C3AED',
+                    '#EC4899',
+                    '#3B82F6',
+                    '#10B981'
+                ],
+                borderWidth: 0,
+                borderRadius: 4
+            }]
+        };
 
-        let total = 0;
-        let offset = 0;
-        const paths = categories.map(category => {
-            total += category.value;
-            const path = `
-                <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="${category.color}"
-                    stroke-width="20"
-                    stroke-dasharray="${category.value} 100"
-                    stroke-dashoffset="-${offset}"
-                    transform="rotate(-90) translate(-100, 0)"
-                />
-            `;
-            offset += category.value;
-            return path;
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: practiceData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
         });
-
-        this.practiceChart.innerHTML = `
-            <div class="practice-distribution">
-                <svg viewBox="0 0 100 100">
-                    ${paths.join('')}
-                </svg>
-                <div class="practice-legend">
-                    ${categories.map(category => `
-                        <div class="legend-item">
-                            <span class="color-dot" style="background: ${category.color}"></span>
-                            <span class="category-name">${category.name}</span>
-                            <span class="category-value">${category.value}%</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
     }
 
     handleLogout() {

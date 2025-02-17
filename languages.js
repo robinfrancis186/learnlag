@@ -79,13 +79,147 @@ const languageResponses = {
     }
 };
 
+const languageCurriculum = {
+    beginner: {
+        level1: {
+            title: "Basic Greetings",
+            lessons: [
+                { type: "greeting", phrase: "Hello", response: "Hello! Try saying: How are you?" },
+                { type: "greeting", phrase: "How are you", response: "I'm good, thank you! Try saying: Nice to meet you" },
+                { type: "greeting", phrase: "Goodbye", response: "Goodbye! See you next time!" }
+            ]
+        },
+        level2: {
+            title: "Simple Questions",
+            lessons: [
+                { type: "question", phrase: "What is your name", response: "My name is AI. Try asking: Where are you from?" },
+                { type: "question", phrase: "Where are you from", response: "I'm from the cloud! Try asking: What time is it?" }
+            ]
+        },
+        level3: {
+            title: "Numbers & Time",
+            lessons: [
+                { type: "numbers", phrase: "Count from 1 to 5", response: "Good! Now try counting from 6 to 10" },
+                { type: "time", phrase: "What time is it", response: "Let's practice telling time together" }
+            ]
+        }
+    },
+    intermediate: {
+        level1: {
+            title: "Daily Activities",
+            lessons: [
+                { type: "routine", phrase: "Tell me about your morning routine", response: "Let's discuss daily activities" },
+                { type: "schedule", phrase: "What's your schedule today", response: "Good! Now try describing your weekend" }
+            ]
+        },
+        level2: {
+            title: "Opinions & Preferences",
+            lessons: [
+                { type: "opinion", phrase: "What do you like to do", response: "Great! Now tell me what you don't like" },
+                { type: "preference", phrase: "What's your favorite", response: "Excellent! Let's discuss why you prefer it" }
+            ]
+        }
+    },
+    advanced: {
+        level1: {
+            title: "Complex Conversations",
+            lessons: [
+                { type: "debate", phrase: "What do you think about", response: "Let's explore this topic deeper" },
+                { type: "discussion", phrase: "Can you explain why", response: "Great analysis! Let's consider another perspective" }
+            ]
+        }
+    }
+};
+
 class LanguageHandler {
     constructor() {
         this.currentLanguage = 'en';
         this.proficiencyLevel = 'beginner';
+        this.currentLevel = 'level1';
+        this.lessonIndex = 0;
         this.immersiveMode = false;
         this.culturalContext = false;
         this.pronunciationFocus = false;
+        this.initializeProgress();
+    }
+
+    initializeProgress() {
+        const savedProgress = localStorage.getItem('languageProgress');
+        if (savedProgress) {
+            const progress = JSON.parse(savedProgress);
+            this.proficiencyLevel = progress.proficiencyLevel;
+            this.currentLevel = progress.currentLevel;
+            this.lessonIndex = progress.lessonIndex;
+        }
+    }
+
+    getCurrentLesson() {
+        return languageCurriculum[this.proficiencyLevel][this.currentLevel].lessons[this.lessonIndex];
+    }
+
+    getNextLesson() {
+        const currentLevelLessons = languageCurriculum[this.proficiencyLevel][this.currentLevel].lessons;
+        
+        if (this.lessonIndex < currentLevelLessons.length - 1) {
+            this.lessonIndex++;
+        } else {
+            // Move to next level
+            const levels = Object.keys(languageCurriculum[this.proficiencyLevel]);
+            const currentLevelIndex = levels.indexOf(this.currentLevel);
+            
+            if (currentLevelIndex < levels.length - 1) {
+                this.currentLevel = levels[currentLevelIndex + 1];
+                this.lessonIndex = 0;
+            } else {
+                // Move to next proficiency level
+                const proficiencyLevels = Object.keys(languageCurriculum);
+                const currentProficiencyIndex = proficiencyLevels.indexOf(this.proficiencyLevel);
+                
+                if (currentProficiencyIndex < proficiencyLevels.length - 1) {
+                    this.proficiencyLevel = proficiencyLevels[currentProficiencyIndex + 1];
+                    this.currentLevel = 'level1';
+                    this.lessonIndex = 0;
+                }
+            }
+        }
+
+        this.saveProgress();
+        return this.getCurrentLesson();
+    }
+
+    saveProgress() {
+        localStorage.setItem('languageProgress', JSON.stringify({
+            proficiencyLevel: this.proficiencyLevel,
+            currentLevel: this.currentLevel,
+            lessonIndex: this.lessonIndex
+        }));
+    }
+
+    getLessonPrompt() {
+        const lesson = this.getCurrentLesson();
+        const level = languageCurriculum[this.proficiencyLevel][this.currentLevel];
+        return `${level.title}: ${lesson.response}`;
+    }
+
+    evaluateResponse(userInput) {
+        const lesson = this.getCurrentLesson();
+        const userWords = userInput.toLowerCase().trim();
+        const targetWords = lesson.phrase.toLowerCase();
+
+        // Simple matching for now - can be made more sophisticated
+        if (userWords.includes(targetWords) || targetWords.includes(userWords)) {
+            return {
+                success: true,
+                feedback: "Good job! Let's move to the next lesson.",
+                nextLesson: this.getNextLesson()
+            };
+        }
+
+        return {
+            success: false,
+            feedback: `Try saying: "${lesson.phrase}"`,
+            nextLesson: null
+        };
     }
 
     setLanguage(languageCode) {

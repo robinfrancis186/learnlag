@@ -41,6 +41,11 @@ class LanguageLearningApp {
             wordsLearned: new Set(),
             challengeCompleted: false
         };
+
+        // Initialize with first lesson
+        setTimeout(() => {
+            this.addMessage(this.languageHandler.getLessonPrompt(), 'ai');
+        }, 1000);
     }
 
     initializeSpeechSynthesis() {
@@ -206,33 +211,27 @@ class LanguageLearningApp {
         const userMessage = this.userInput.value.trim();
         if (!userMessage || this.isProcessing) return;
 
-        const targetLang = this.targetLanguage.value;
-        const sourceLang = await this.detectLanguage(userMessage);
-        
         this.addMessage(userMessage, 'user');
         this.userInput.value = '';
         this.sendButton.style.opacity = '0.5';
-
-        // If source language is different from target, show original and translation
-        if (sourceLang && sourceLang !== targetLang) {
-            const translation = await this.getSmartTranslation(userMessage, sourceLang, targetLang);
-            if (translation) {
-                this.addTranslationMessage(userMessage, translation, sourceLang, targetLang);
+        
+        // Get current lesson and evaluate response
+        const evaluation = this.languageHandler.evaluateResponse(userMessage);
+        
+        if (evaluation.success) {
+            this.addMessage(evaluation.feedback, 'ai');
+            if (evaluation.nextLesson) {
+                setTimeout(() => {
+                    this.addMessage(this.languageHandler.getLessonPrompt(), 'ai');
+                }, 1500);
             }
+        } else {
+            this.addMessage(evaluation.feedback, 'ai');
         }
 
-        const aiResponse = await this.getAIResponse(userMessage, targetLang, isVoiceInput, sourceLang);
-        
-        // Generate flashcards from the conversation
-        if (aiResponse) {
-            this.generateFlashcards(userMessage, aiResponse);
-        }
-        
-        this.checkAchievements(userMessage, aiResponse, isVoiceInput);
-        
-        // Award XP
-        this.awardXP(10);
-        if (isVoiceInput) this.awardXP(5);
+        // Award XP for participation
+        this.awardXP(5);
+        if (isVoiceInput) this.awardXP(2);
     }
 
     async detectLanguage(text) {
