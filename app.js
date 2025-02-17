@@ -594,46 +594,31 @@ class LanguageLearningApp {
             this.showTypingIndicator();
 
             const currentLang = this.targetLanguage.value;
-            const langProgress = this.userProgress.languages[currentLang];
-            const recentPractice = langProgress.practiceHistory.slice(-5).map(h => h.message);
-            const commonMistakes = Object.entries(this.userProgress.commonMistakes)
-                .filter(([key, value]) => value > 2)
-                .map(([key]) => key);
-
-            // Get language-specific context
-            const targetLangInfo = this.supportedLanguages[targetLanguage];
-            const relevantGrammarRules = targetLangInfo.grammarRules.join(', ');
-            const commonPhrases = Object.entries(targetLangInfo.commonPhrases)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(', ');
-
-            const prompt = `You are an adaptive language learning assistant. The user is learning ${targetLangInfo.name}.
-                          User's current level: ${langProgress.level}
-                          Recent practice: ${JSON.stringify(recentPractice)}
-                          Common mistakes: ${JSON.stringify(commonMistakes)}
-                          Learning streak: ${this.userProgress.streak} days
+            const langInfo = this.supportedLanguages[currentLang];
+            
+            // Create a more focused prompt for language learning
+            const prompt = `You are a helpful language tutor teaching ${langInfo.name}.
+                          
+                          User message: "${userMessage}"
                           Source language: ${sourceLang === 'en' ? 'English' : this.supportedLanguages[sourceLang]?.name}
-                          
-                          Relevant grammar rules: ${relevantGrammarRules}
-                          Common phrases: ${commonPhrases}
-                          
-                          ${isVoiceInput ? "The user spoke this message, so please pay special attention to pronunciation feedback." : ""}
+                          Target language: ${langInfo.name}
                           
                           Instructions:
-                          1. If the message is in English:
-                             - Start with the translation
-                             - Then provide additional details (pronunciation, examples, etc.)
+                          1. If the message is in the source language:
+                             - Provide the translation
+                             - Explain key grammar points
+                             - Give example usage
                           
-                          2. If the message is in ${targetLangInfo.name}:
-                             - Start with corrections or confirmation
-                             - Then provide additional feedback
+                          2. If the message is in the target language:
+                             - Correct any mistakes
+                             - Provide positive reinforcement
+                             - Suggest improvements
                           
-                          3. Keep the first line as the main response that should be spoken.
+                          3. Keep responses concise and focused on learning
+                          4. Include one relevant example
+                          5. Format response in a clear, easy-to-read way
                           
-                          Format the response with the main response in the first line, followed by additional details.
-                          Keep the tone encouraging and friendly.
-                          
-                          User message: ${userMessage}`;
+                          Respond in a conversational, encouraging tone.`;
 
             const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
                 method: 'POST',
@@ -656,24 +641,17 @@ class LanguageLearningApp {
             const data = await response.json();
             const aiResponse = data.candidates[0].content.parts[0].text;
             
-            // Update learning progress
-            const isCorrect = !aiResponse.toLowerCase().includes('correction') && 
-                            !aiResponse.toLowerCase().includes('mistake');
-            this.updateLanguageProgress(aiResponse, userMessage, isCorrect);
-
             this.removeTypingIndicator();
             this.addMessage(aiResponse, 'ai');
 
-            // Immediately speak the first line of the response
+            // Speak the first line of the response
             const firstLine = aiResponse.split('\n')[0].trim();
             if (firstLine) {
                 this.speakText(firstLine, this.targetLanguage.value);
             }
 
-            // Suggest next practice if appropriate
-            if (this.currentSession.interactions % 5 === 0) {
-                this.suggestNextPractice();
-            }
+            // Quietly update progress in the background
+            this.updateProgress(userMessage, aiResponse, isVoiceInput);
 
             return aiResponse;
 
@@ -684,8 +662,40 @@ class LanguageLearningApp {
             return null;
         } finally {
             this.isProcessing = false;
-            this.currentSession.interactions++;
         }
+    }
+
+    // Move progress tracking to a separate method
+    async updateProgress(userMessage, aiResponse, isVoiceInput) {
+        const currentLang = this.targetLanguage.value;
+        const progress = this.userProgress.languages[currentLang];
+        
+        // Update statistics quietly
+        if (!aiResponse.toLowerCase().includes('correction') && 
+            !aiResponse.toLowerCase().includes('mistake')) {
+            progress.correctResponses = (progress.correctResponses || 0) + 1;
+        }
+        
+        if (isVoiceInput) {
+            progress.voicePractices = (progress.voicePractices || 0) + 1;
+        }
+        
+        // Track vocabulary
+        const words = userMessage.toLowerCase().split(/\s+/);
+        words.forEach(word => {
+            if (!this.userProgress.vocabulary[word]) {
+                this.userProgress.vocabulary[word] = {
+                    firstSeen: new Date(),
+                    timesUsed: 1,
+                    lastUsed: new Date()
+                };
+            } else {
+                this.userProgress.vocabulary[word].timesUsed++;
+                this.userProgress.vocabulary[word].lastUsed = new Date();
+            }
+        });
+        
+        this.saveProgress();
     }
 
     async suggestNextPractice() {
