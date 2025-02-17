@@ -1,15 +1,39 @@
 :root {
-    --primary-color: #7C3AED;
-    --primary-light: #DDD6FE;
-    --secondary-color: #4B5563;
-    --background-color: #F3F4F6;
+    /* New modern color palette */
+    --primary-color: #4F46E5;
+    --primary-dark: #3730A3;
+    --primary-light: #818CF8;
+    --secondary-color: #10B981;
+    --secondary-dark: #059669;
+    --accent-color: #F59E0B;
+    --accent-dark: #D97706;
+    --background-color: #F8FAFC;
     --surface-color: #FFFFFF;
-    --text-color: #1F2937;
-    --border-radius: 16px;
-    --spacing: 20px;
+    --text-primary: #1E293B;
+    --text-secondary: #475569;
+    --text-tertiary: #64748B;
+    --error-color: #EF4444;
+    --success-color: #22C55E;
+    --warning-color: #F59E0B;
+    --info-color: #3B82F6;
+    
+    /* 3D effect variables */
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --gradient: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-3d: 0 8px 16px rgba(0, 0, 0, 0.1),
+                 0 16px 32px rgba(0, 0, 0, 0.1);
+    --gradient-primary: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    --gradient-secondary: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));
+    --gradient-accent: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+    
+    /* Border radius */
+    --border-radius-sm: 0.375rem;
+    --border-radius-md: 0.5rem;
+    --border-radius-lg: 1rem;
+    --border-radius-xl: 1.5rem;
 }
 
 * {
@@ -37,6 +61,10 @@ header {
     margin-bottom: calc(var(--spacing) * 1.5);
     padding: var(--spacing) 0;
     position: relative;
+    background: var(--surface-color);
+    border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
 }
 
 header::after {
@@ -70,10 +98,12 @@ h1 {
 
 .language-selector {
     background: var(--surface-color);
-    border-radius: var(--border-radius);
-    padding: calc(var(--spacing) * 1.5);
-    margin-bottom: var(--spacing);
-    box-shadow: var(--shadow-md);
+    border-radius: var(--border-radius-xl);
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: var(--shadow-3d);
+    transform: translateZ(0);
+    transition: transform 0.3s ease;
 }
 
 .language-header {
@@ -112,7 +142,7 @@ h1 {
 .language-select-group select {
     padding: 12px;
     border: 2px solid var(--primary-light);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-md);
     background-color: var(--surface-color);
     font-size: 1rem;
     cursor: pointer;
@@ -130,7 +160,7 @@ h1 {
 
 .learning-preferences {
     background: var(--background-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: var(--spacing);
     margin-top: var(--spacing);
 }
@@ -155,28 +185,30 @@ h1 {
 
 .preference-checkbox input[type="checkbox"] {
     appearance: none;
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--primary-light);
-    border-radius: 4px;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--surface-color);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
     position: relative;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
 .preference-checkbox input[type="checkbox"]:checked {
-    background: var(--gradient);
-    border-color: var(--primary-color);
+    background: var(--primary-color);
+    transform: scale(1.1);
 }
 
 .preference-checkbox input[type="checkbox"]:checked::after {
     content: '✓';
-    position: absolute;
     color: white;
-    font-size: 14px;
+    position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    font-size: 1rem;
 }
 
 .preference-checkbox span {
@@ -205,7 +237,7 @@ h1 {
 
 .interaction-area {
     background-color: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-md);
     overflow: hidden;
     border: 1px solid var(--primary-light);
@@ -234,10 +266,14 @@ h1 {
 .message {
     margin-bottom: 16px;
     padding: 12px 16px;
-    border-radius: 16px;
+    border-radius: var(--border-radius-lg);
     max-width: 85%;
     position: relative;
     animation: messageAppear 0.3s ease-out;
+    background: var(--surface-color);
+    box-shadow: var(--shadow-md);
+    transform: translateZ(0);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 @keyframes messageAppear {
@@ -251,19 +287,27 @@ h1 {
     }
 }
 
+.message:hover {
+    transform: translateZ(10px) scale(1.02);
+    box-shadow: var(--shadow-3d);
+}
+
 .user-message {
-    background: var(--gradient);
+    background: var(--gradient-primary);
     color: white;
     margin-left: auto;
     border-bottom-right-radius: 4px;
+    transform-origin: right center;
 }
 
 .ai-message {
-    background-color: var(--primary-light);
-    color: var(--text-color);
+    background: var(--surface-color);
+    border: 1px solid rgba(79, 70, 229, 0.1);
+    color: var(--text-primary);
     margin-right: auto;
     border-bottom-left-radius: 4px;
     white-space: pre-wrap;
+    transform-origin: left center;
 }
 
 .ai-message code {
@@ -285,10 +329,10 @@ h1 {
     flex: 1;
     padding: 14px;
     border: 2px solid var(--primary-light);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-inner);
 }
 
 #userInput:focus {
@@ -300,8 +344,8 @@ h1 {
 .voice-button, .send-button {
     padding: 14px;
     border: none;
-    border-radius: var(--border-radius);
-    background: var(--gradient);
+    border-radius: var(--border-radius-md);
+    background: var(--gradient-primary);
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -309,12 +353,12 @@ h1 {
     align-items: center;
     justify-content: center;
     min-width: 50px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
 }
 
 .voice-button:hover, .send-button:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .voice-button:active, .send-button:active {
@@ -777,7 +821,7 @@ button:focus, input:focus, select:focus {
     background: linear-gradient(135deg, #FFB86C 0%, #FF8E53 100%);
     color: white;
     padding: 12px 16px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     margin-top: 8px;
     font-size: 0.9rem;
 }
@@ -792,7 +836,7 @@ button:focus, input:focus, select:focus {
     background: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%);
     color: white;
     padding: 12px 16px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     margin-top: 8px;
     font-size: 0.9rem;
 }
@@ -807,7 +851,7 @@ button:focus, input:focus, select:focus {
     background: linear-gradient(135deg, #34D399 0%, #059669 100%);
     color: white;
     padding: 12px 16px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     margin-top: 8px;
     font-size: 0.9rem;
 }
@@ -881,7 +925,7 @@ button:focus, input:focus, select:focus {
     margin: 16px 0;
     padding: 16px;
     background: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-sm);
 }
 
@@ -936,7 +980,7 @@ button:focus, input:focus, select:focus {
 .voice-feedback {
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--surface-color) 100%);
     padding: 16px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     margin: 16px 0;
     animation: slideIn 0.3s ease-out;
 }
@@ -977,7 +1021,7 @@ emphasis {
 /* Learning Module Card */
 .learning-module {
     background: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: 16px;
     margin: 16px 0;
     border: 1px solid var(--primary-light);
@@ -1030,7 +1074,7 @@ emphasis {
 /* Pronunciation Analysis */
 .analysis-result {
     background: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: 16px;
     margin-top: 12px;
 }
@@ -1100,15 +1144,16 @@ emphasis {
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
-    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-md);
+    transition: transform 0.6s ease;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-3d);
     backface-visibility: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
     text-align: center;
+    background: var(--surface-color);
 }
 
 .flashcard.front {
@@ -1217,7 +1262,7 @@ emphasis {
     background: var(--gradient);
     color: white;
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: 10px 20px;
     font-weight: 500;
     cursor: pointer;
@@ -1230,7 +1275,7 @@ emphasis {
 
 .flashcard-review-button:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
 }
 
 .flashcard-message {
@@ -1306,7 +1351,7 @@ emphasis {
 
 .auth-card {
     background: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-md);
     padding: calc(var(--spacing) * 1.5);
     width: 100%;
@@ -1330,7 +1375,7 @@ emphasis {
     border: none;
     background: var(--background-color);
     color: var(--secondary-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1364,7 +1409,7 @@ emphasis {
     width: 100%;
     padding: 12px;
     border: 2px solid var(--primary-light);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     font-size: 1rem;
     transition: all 0.3s ease;
 }
@@ -1379,7 +1424,7 @@ emphasis {
     width: 100%;
     padding: 14px;
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     background: var(--gradient);
     color: white;
     font-weight: 600;
@@ -1389,7 +1434,7 @@ emphasis {
 
 .auth-button:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
 }
 
 .auth-links {
@@ -1445,7 +1490,7 @@ emphasis {
     gap: 8px;
     padding: 12px;
     border: 2px solid var(--primary-light);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     background: white;
     color: var(--text-color);
     font-weight: 500;
@@ -1467,7 +1512,7 @@ emphasis {
     background: #FEE2E2;
     color: #DC2626;
     padding: 12px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     margin-bottom: 16px;
     font-size: 0.9rem;
     animation: shake 0.5s ease-in-out;
@@ -1486,7 +1531,7 @@ emphasis {
     align-items: center;
     padding: var(--spacing);
     background: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     margin-bottom: var(--spacing);
     box-shadow: var(--shadow-sm);
 }
@@ -1497,7 +1542,7 @@ emphasis {
     gap: 8px;
     padding: 8px 16px;
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1520,7 +1565,7 @@ emphasis {
 
 .profile-main {
     background: var(--surface-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: var(--spacing);
     box-shadow: var(--shadow-md);
 }
@@ -1607,7 +1652,7 @@ emphasis {
 
 .language-card {
     background: var(--background-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: var(--spacing);
     box-shadow: var(--shadow-sm);
 }
@@ -1637,6 +1682,7 @@ emphasis {
 
 .skill-bars {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 12px;
 }
 
@@ -1674,16 +1720,17 @@ emphasis {
     display: flex;
     align-items: center;
     gap: 12px;
-    background: var(--background-color);
-    border-radius: var(--border-radius);
-    padding: var(--spacing);
-    box-shadow: var(--shadow-sm);
+    background: var(--surface-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    transform: translateZ(0);
     transition: all 0.3s ease;
 }
 
 .achievement-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateZ(20px) scale(1.05);
+    box-shadow: var(--shadow-3d);
 }
 
 .achievement-card.earned {
@@ -1728,7 +1775,7 @@ emphasis {
 
 .stat-card {
     background: var(--background-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: var(--spacing);
     box-shadow: var(--shadow-sm);
 }
@@ -1865,13 +1912,13 @@ emphasis {
 .flashcard-stat {
     text-align: center;
     background: var(--background-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: var(--spacing);
 }
 
 .review-schedule {
     background: var(--background-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     padding: var(--spacing);
 }
 
@@ -1979,7 +2026,7 @@ emphasis {
     color: var(--primary-color);
     border: none;
     padding: 8px 16px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-lg);
     font-weight: 500;
     cursor: pointer;
     transition: transform 0.2s;
@@ -2075,6 +2122,7 @@ img[loading="lazy"] {
   transform-origin: 50% 50%;
   margin-top: calc(var(--size) * 1.5 * -1);
   transform: rotateX(60deg) rotateZ(45deg) rotateY(0deg) translateZ(0px);
+  animation: float 3s ease-in-out infinite;
 }
 
 .boxes .box {
@@ -2111,7 +2159,7 @@ img[loading="lazy"] {
 }
 
 .boxes .box > div {
-  --background: #5C8DF6;
+  --background: var(--primary-color);
   --top: auto;
   --right: auto;
   --bottom: auto;
@@ -2127,7 +2175,9 @@ img[loading="lazy"] {
   right: var(--right);
   bottom: var(--bottom);
   left: var(--left);
-  transform: rotateY(var(--rotateY)) rotateX(var(--rotateX)) translateZ(var(--translateZ));
+  transform: translateZ(var(--translateZ)) rotateY(var(--rotateY)) rotateX(var(--rotateX));
+  filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.3));
+  animation: box-animate var(--duration) ease-in-out infinite;
 }
 
 .boxes .box > div:nth-child(1) {
@@ -2247,4 +2297,36 @@ img[loading="lazy"] {
   100% {
     transform: translate(100%, 100%);
   }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: rotateX(60deg) rotateZ(45deg) rotateY(0deg) translateZ(0px);
+    }
+    50% {
+        transform: rotateX(60deg) rotateZ(45deg) rotateY(0deg) translateZ(20px);
+    }
+}
+
+.boxes .box > div:nth-child(1) {
+  --top: 0;
+  --left: 0;
+}
+
+.boxes .box > div:nth-child(2) {
+  --background: #145af2;
+  --right: 0;
+  --rotateY: 90deg;
+}
+
+.boxes .box > div:nth-child(3) {
+  --background: #447cf5;
+  --rotateX: -90deg;
+}
+
+.boxes .box > div:nth-child(4) {
+  --background: #DBE3F4;
+  --top: 0;
+  --left: 0;
+  --translateZ: calc(var(--size) * 3 * -1);
 } 
