@@ -424,4 +424,179 @@ button:focus, input:focus, select:focus {
 /* Improve language selector */
 .language-selector select {
     padding-right: 40px;
+}
+
+/* Achievement celebration animation */
+.achievement-celebration {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    background: radial-gradient(circle, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
+    animation: celebrationFade 3s ease-out forwards;
+}
+
+@keyframes celebrationFade {
+    0% {
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.achievement-celebration::before {
+    content: '🎉';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 5rem;
+    animation: celebrationBounce 1s ease-out;
+}
+
+@keyframes celebrationBounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    70% {
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Achievement message styling */
+.ai-message[data-type="achievement"] {
+    background: var(--gradient);
+    color: white;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+    animation: achievementAppear 0.5s ease-out;
+}
+
+@keyframes achievementAppear {
+    0% {
+        transform: translateY(20px) scale(0.8);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* XP gain animation */
+.xp-gain {
+    position: absolute;
+    right: 20px;
+    color: var(--primary-color);
+    font-weight: bold;
+    animation: xpFloat 1.5s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes xpFloat {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-40px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* Daily challenge styling */
+.ai-message[data-type="challenge"] {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    color: white;
+    border: none;
+}
+
+.challenge-progress {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.challenge-progress-bar {
+    height: 100%;
+    background: white;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Level indicator */
+.level-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: var(--gradient);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Streak indicator */
+.streak-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.streak-counter .fire-icon {
+    font-size: 1.2em;
+}
+
+/* Message with rewards */
+.message.with-reward {
+    position: relative;
+    overflow: hidden;
+}
+
+.message.with-reward::after {
+    content: '✨';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+/* Improve mobile experience */
+@media (max-width: 600px) {
+    .achievement-celebration::before {
+        font-size: 4rem;
+    }
+    
+    .level-badge, .streak-counter {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
 } 

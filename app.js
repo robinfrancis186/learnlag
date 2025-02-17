@@ -9,6 +9,8 @@ class LanguageLearningApp {
         this.initializeTypingAnimation();
         this.initializeSpeechSynthesis();
         this.initializeUserProgress();
+        this.initializeGamification();
+        this.checkDailyChallenge();
     }
 
     initializeElements() {
@@ -27,6 +29,13 @@ class LanguageLearningApp {
             correctUses: 0,
             mistakes: [],
             practicedPhrases: new Set()
+        };
+        this.achievements = new Set();
+        this.dailyGoals = {
+            interactions: 0,
+            correctResponses: 0,
+            wordsLearned: new Set(),
+            challengeCompleted: false
         };
     }
 
@@ -132,7 +141,14 @@ class LanguageLearningApp {
         this.sendButton.style.opacity = '0.5';
 
         const targetLang = this.targetLanguage.value;
-        await this.getAIResponse(userMessage, targetLang, isVoiceInput);
+        const aiResponse = await this.getAIResponse(userMessage, targetLang, isVoiceInput);
+        
+        // Check achievements after each interaction
+        this.checkAchievements(userMessage, aiResponse, isVoiceInput);
+        
+        // Award XP for interaction
+        this.awardXP(10); // Base XP for each interaction
+        if (isVoiceInput) this.awardXP(5); // Bonus XP for voice practice
     }
 
     addMessage(text, sender, isTemporary = false) {
@@ -415,10 +431,13 @@ class LanguageLearningApp {
                 this.suggestNextPractice();
             }
 
+            return aiResponse;
+
         } catch (error) {
             console.error('Error:', error);
             this.removeTypingIndicator();
             this.addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+            return null;
         } finally {
             this.isProcessing = false;
             this.currentSession.interactions++;
@@ -473,6 +492,296 @@ class LanguageLearningApp {
             'it': 'it-IT'
         };
         return languageCodes[language] || 'en-US';
+    }
+
+    initializeGamification() {
+        // Define achievements and badges
+        this.achievementsList = {
+            'first_conversation': {
+                id: 'first_conversation',
+                title: '🎯 First Steps',
+                description: 'Complete your first conversation',
+                earned: false
+            },
+            'perfect_streak_3': {
+                id: 'perfect_streak_3',
+                title: '🎯 Quick Learner',
+                description: 'Get 3 correct responses in a row',
+                earned: false
+            },
+            'daily_goal': {
+                id: 'daily_goal',
+                title: '🎯 Goal Crusher',
+                description: 'Complete daily learning goal',
+                earned: false
+            },
+            'vocabulary_master': {
+                id: 'vocabulary_master',
+                title: '📚 Vocabulary Master',
+                description: 'Learn 50 new words',
+                earned: false
+            },
+            'pronunciation_pro': {
+                id: 'pronunciation_pro',
+                title: '🎤 Pronunciation Pro',
+                description: 'Complete 10 voice exercises',
+                earned: false
+            },
+            'streak_7': {
+                id: 'streak_7',
+                title: '🔥 Week Warrior',
+                description: 'Maintain a 7-day learning streak',
+                earned: false
+            }
+        };
+
+        // Load saved achievements
+        const savedAchievements = localStorage.getItem('achievements');
+        if (savedAchievements) {
+            const earned = JSON.parse(savedAchievements);
+            earned.forEach(id => {
+                this.achievementsList[id].earned = true;
+                this.achievements.add(id);
+            });
+        }
+    }
+
+    async checkDailyChallenge() {
+        const currentLang = this.targetLanguage.value;
+        const langProgress = this.userProgress.languages[currentLang];
+        const today = new Date().toDateString();
+
+        // Check if we need to generate a new daily challenge
+        if (!this.userProgress.dailyChallenge || 
+            this.userProgress.dailyChallenge.date !== today) {
+            
+            // Generate new challenge based on user level
+            const prompt = `Create a daily language learning challenge for a ${langProgress.level} level student.
+                          Recent practice topics: ${JSON.stringify(langProgress.practiceHistory.slice(-3))}
+                          Grammar accuracy: ${langProgress.grammarAccuracy * 100}%
+                          
+                          Create a challenge that:
+                          1. Practices relevant vocabulary and grammar
+                          2. Is achievable in 5-10 minutes
+                          3. Includes specific goals (e.g., "Use 3 past tense verbs")
+                          4. Is fun and engaging
+                          
+                          Format the challenge in a concise, motivating way.`;
+
+            try {
+                const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const challenge = data.candidates[0].content.parts[0].text;
+                    
+                    this.userProgress.dailyChallenge = {
+                        date: today,
+                        challenge: challenge,
+                        completed: false,
+                        progress: 0
+                    };
+                    
+                    this.saveProgress();
+                    this.showDailyChallenge();
+                }
+            } catch (error) {
+                console.error('Error generating daily challenge:', error);
+            }
+        } else if (!this.userProgress.dailyChallenge.completed) {
+            // Show existing uncompleted challenge
+            this.showDailyChallenge();
+        }
+    }
+
+    showDailyChallenge() {
+        const challenge = this.userProgress.dailyChallenge;
+        if (challenge && !challenge.completed) {
+            setTimeout(() => {
+                this.addMessage(`📅 Daily Challenge:\n${challenge.challenge}\n\nComplete this challenge to earn XP and badges!`, 'ai');
+            }, 1000);
+        }
+    }
+
+    checkAchievements(userMessage, aiResponse, isVoiceInput) {
+        const currentLang = this.targetLanguage.value;
+        const langProgress = this.userProgress.languages[currentLang];
+
+        // Check for first conversation
+        if (!this.achievementsList.first_conversation.earned && 
+            this.currentSession.interactions > 1) {
+            this.awardAchievement('first_conversation');
+        }
+
+        // Check for perfect streak
+        if (!this.achievementsList.perfect_streak_3.earned && 
+            this.currentSession.correctUses >= 3) {
+            this.awardAchievement('perfect_streak_3');
+        }
+
+        // Check for vocabulary master
+        const vocabularySize = Object.keys(this.userProgress.vocabulary).length;
+        if (!this.achievementsList.vocabulary_master.earned && 
+            vocabularySize >= 50) {
+            this.awardAchievement('vocabulary_master');
+        }
+
+        // Check for pronunciation pro
+        if (!this.achievementsList.pronunciation_pro.earned && 
+            isVoiceInput && this.currentSession.voiceInteractions >= 10) {
+            this.awardAchievement('pronunciation_pro');
+        }
+
+        // Check for week warrior
+        if (!this.achievementsList.streak_7.earned && 
+            this.userProgress.streak >= 7) {
+            this.awardAchievement('streak_7');
+        }
+
+        // Update daily goals
+        this.updateDailyGoals(userMessage, aiResponse, isVoiceInput);
+    }
+
+    awardAchievement(achievementId) {
+        const achievement = this.achievementsList[achievementId];
+        if (!achievement.earned) {
+            achievement.earned = true;
+            this.achievements.add(achievementId);
+            
+            // Save earned achievements
+            localStorage.setItem('achievements', 
+                JSON.stringify([...this.achievements]));
+            
+            // Show achievement notification
+            this.addMessage(`🏆 Achievement Unlocked: ${achievement.title}\n${achievement.description}`, 'ai');
+            
+            // Add celebration animation
+            this.celebrateAchievement();
+        }
+    }
+
+    celebrateAchievement() {
+        const celebration = document.createElement('div');
+        celebration.className = 'achievement-celebration';
+        document.body.appendChild(celebration);
+        
+        setTimeout(() => {
+            document.body.removeChild(celebration);
+        }, 3000);
+    }
+
+    updateDailyGoals(userMessage, aiResponse, isVoiceInput) {
+        const today = new Date().toDateString();
+        
+        // Reset daily goals if it's a new day
+        if (this.dailyGoals.date !== today) {
+            this.dailyGoals = {
+                date: today,
+                interactions: 0,
+                correctResponses: 0,
+                wordsLearned: new Set(),
+                challengeCompleted: false
+            };
+        }
+
+        // Update goals
+        this.dailyGoals.interactions++;
+        if (!aiResponse.toLowerCase().includes('mistake')) {
+            this.dailyGoals.correctResponses++;
+        }
+
+        // Track new words
+        const words = userMessage.toLowerCase().split(/\s+/);
+        words.forEach(word => {
+            if (!this.userProgress.vocabulary[word]) {
+                this.dailyGoals.wordsLearned.add(word);
+            }
+        });
+
+        // Check daily challenge progress
+        if (this.userProgress.dailyChallenge && 
+            !this.userProgress.dailyChallenge.completed) {
+            this.checkChallengeProgress(userMessage, aiResponse);
+        }
+
+        // Check if daily goals are met
+        if (!this.achievementsList.daily_goal.earned && 
+            this.dailyGoals.interactions >= 10 && 
+            this.dailyGoals.correctResponses >= 7 && 
+            this.dailyGoals.wordsLearned.size >= 5) {
+            this.awardAchievement('daily_goal');
+        }
+    }
+
+    checkChallengeProgress(userMessage, aiResponse) {
+        const challenge = this.userProgress.dailyChallenge;
+        if (!challenge || challenge.completed) return;
+
+        // Simple progress tracking (can be made more sophisticated)
+        challenge.progress++;
+        
+        // Consider challenge completed after meaningful interactions
+        if (challenge.progress >= 5 && 
+            !aiResponse.toLowerCase().includes('mistake')) {
+            challenge.completed = true;
+            this.saveProgress();
+            this.addMessage('🎉 Congratulations! You\'ve completed today\'s challenge!', 'ai');
+            this.awardXP(100); // Award XP for completing challenge
+        }
+    }
+
+    awardXP(amount) {
+        const currentLang = this.targetLanguage.value;
+        if (!this.userProgress.languages[currentLang].xp) {
+            this.userProgress.languages[currentLang].xp = 0;
+        }
+        
+        this.userProgress.languages[currentLang].xp += amount;
+        this.saveProgress();
+        
+        // Show XP gain
+        this.addMessage(`✨ +${amount} XP`, 'ai');
+        
+        // Check for level up
+        this.checkLevelUp();
+    }
+
+    checkLevelUp() {
+        const currentLang = this.targetLanguage.value;
+        const langProgress = this.userProgress.languages[currentLang];
+        const currentXP = langProgress.xp;
+        
+        const levels = {
+            beginner: 0,
+            intermediate: 1000,
+            advanced: 3000,
+            expert: 6000
+        };
+
+        let newLevel = 'beginner';
+        for (const [level, requiredXP] of Object.entries(levels)) {
+            if (currentXP >= requiredXP) {
+                newLevel = level;
+            }
+        }
+
+        if (newLevel !== langProgress.level) {
+            langProgress.level = newLevel;
+            this.saveProgress();
+            this.addMessage(`🎊 Level Up! You're now at ${newLevel} level!`, 'ai');
+        }
     }
 }
 
