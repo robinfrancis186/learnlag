@@ -7,6 +7,7 @@ class LanguageLearningApp {
         this.initializeEventListeners();
         this.initializeSpeechRecognition();
         this.initializeTypingAnimation();
+        this.initializeSpeechSynthesis();
     }
 
     initializeElements() {
@@ -17,6 +18,19 @@ class LanguageLearningApp {
         this.targetLanguage = document.getElementById('targetLanguage');
         this.isListening = false;
         this.isProcessing = false;
+        this.lastSpokenText = '';
+    }
+
+    initializeSpeechSynthesis() {
+        if ('speechSynthesis' in window) {
+            this.synth = window.speechSynthesis;
+            this.voices = [];
+            
+            // Wait for voices to be loaded
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                this.voices = speechSynthesis.getVoices();
+            });
+        }
     }
 
     initializeEventListeners() {
@@ -31,6 +45,14 @@ class LanguageLearningApp {
         this.userInput.addEventListener('input', () => {
             this.sendButton.style.opacity = this.userInput.value.trim() ? '1' : '0.5';
         });
+
+        // Add language change listener
+        this.targetLanguage.addEventListener('change', () => {
+            this.addMessage(`Switched to ${this.targetLanguage.options[this.targetLanguage.selectedIndex].text}. Let's practice!`, 'ai');
+            if (this.recognition) {
+                this.recognition.lang = this.getLanguageCode(this.targetLanguage.value);
+            }
+        });
     }
 
     initializeTypingAnimation() {
@@ -43,24 +65,28 @@ class LanguageLearningApp {
         if ('webkitSpeechRecognition' in window) {
             this.recognition = new webkitSpeechRecognition();
             this.recognition.continuous = false;
-            this.recognition.interimResults = false;
+            this.recognition.interimResults = true;
+            this.recognition.lang = this.getLanguageCode(this.targetLanguage.value);
 
             this.recognition.onstart = () => {
                 this.voiceButton.classList.add('active');
-                this.addMessage('Listening...', 'ai', true);
+                this.addMessage('Listening... Speak in ' + this.targetLanguage.options[this.targetLanguage.selectedIndex].text, 'ai', true);
             };
 
             this.recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 this.userInput.value = transcript;
-                this.handleUserInput();
+                
+                if (event.results[0].isFinal) {
+                    this.lastSpokenText = transcript;
+                    this.handleUserInput(true);
+                }
             };
 
             this.recognition.onend = () => {
                 this.isListening = false;
                 this.voiceButton.classList.remove('active');
-                // Remove the "Listening..." message
-                if (this.chatContainer.lastChild.textContent === 'Listening...') {
+                if (this.chatContainer.lastChild.textContent.startsWith('Listening...')) {
                     this.chatContainer.removeChild(this.chatContainer.lastChild);
                 }
             };
@@ -88,7 +114,7 @@ class LanguageLearningApp {
         }
     }
 
-    async handleUserInput() {
+    async handleUserInput(isVoiceInput = false) {
         const userMessage = this.userInput.value.trim();
         if (!userMessage || this.isProcessing) return;
 
@@ -97,7 +123,7 @@ class LanguageLearningApp {
         this.sendButton.style.opacity = '0.5';
 
         const targetLang = this.targetLanguage.value;
-        await this.getAIResponse(userMessage, targetLang);
+        await this.getAIResponse(userMessage, targetLang, isVoiceInput);
     }
 
     addMessage(text, sender, isTemporary = false) {
@@ -106,7 +132,43 @@ class LanguageLearningApp {
         if (isTemporary) {
             messageDiv.classList.add('temporary');
         }
-        messageDiv.textContent = text;
+
+        // Create message content
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.textContent = text;
+
+        // Create actions container for AI messages
+        if (sender === 'ai' && !isTemporary) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            
+            // Add listen button
+            const listenButton = document.createElement('button');
+            listenButton.className = 'action-button';
+            listenButton.innerHTML = '<span class="material-icons-round">volume_up</span>';
+            listenButton.title = 'Listen to pronunciation';
+            listenButton.onclick = () => this.speakText(text, this.targetLanguage.value);
+            
+            // Add copy button
+            const copyButton = document.createElement('button');
+            copyButton.className = 'action-button';
+            copyButton.innerHTML = '<span class="material-icons-round">content_copy</span>';
+            copyButton.title = 'Copy to clipboard';
+            copyButton.onclick = () => {
+                navigator.clipboard.writeText(text);
+                copyButton.innerHTML = '<span class="material-icons-round">check</span>';
+                setTimeout(() => {
+                    copyButton.innerHTML = '<span class="material-icons-round">content_copy</span>';
+                }, 2000);
+            };
+
+            actionsDiv.appendChild(listenButton);
+            actionsDiv.appendChild(copyButton);
+            messageDiv.appendChild(actionsDiv);
+        }
+
+        messageDiv.appendChild(contentDiv);
         this.chatContainer.appendChild(messageDiv);
         this.scrollToBottom();
     }
@@ -126,15 +188,45 @@ class LanguageLearningApp {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
-    async getAIResponse(userMessage, targetLanguage) {
+    speakText(text, targetLanguage) {
+        if (!this.synth) return;
+
+        // Cancel any ongoing speech
+        this.synth.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = this.getLanguageCode(targetLanguage);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+
+        // Find the best voice for the language
+        const voices = this.voices.filter(voice => voice.lang.startsWith(this.getLanguageCode(targetLanguage)));
+        if (voices.length > 0) {
+            utterance.voice = voices[0];
+        }
+
+        this.synth.speak(utterance);
+    }
+
+    async getAIResponse(userMessage, targetLanguage, isVoiceInput) {
         try {
             this.isProcessing = true;
             this.showTypingIndicator();
 
             const prompt = `You are a helpful language learning assistant. The user is learning ${targetLanguage}. 
-                          Help them practice and learn the language. If they write in English, provide translations 
-                          and explanations in ${targetLanguage}. If they write in ${targetLanguage}, correct any 
-                          mistakes and provide feedback in English. Keep responses concise and friendly.
+                          ${isVoiceInput ? "The user spoke this message, so please pay special attention to pronunciation feedback. " : ""}
+                          
+                          Instructions:
+                          1. If the message is in English:
+                             - Provide the translation
+                             - Add pronunciation guide using IPA
+                             - Give a simple example of usage
+                          2. If the message is in ${targetLanguage}:
+                             - Correct any grammar or pronunciation mistakes
+                             - Explain the corrections in English
+                             - Suggest alternative phrases if applicable
+                          
+                          Keep responses concise and friendly. Format the response clearly with bullet points or sections.
                           
                           User message: ${userMessage}`;
 
@@ -162,12 +254,16 @@ class LanguageLearningApp {
             this.removeTypingIndicator();
             this.addMessage(aiResponse, 'ai');
 
-            // Text-to-speech for the AI response
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(aiResponse);
-                utterance.lang = this.getLanguageCode(targetLanguage);
-                utterance.rate = 0.9; // Slightly slower for better comprehension
-                speechSynthesis.speak(utterance);
+            // Automatically speak the translation or correction
+            if (isVoiceInput) {
+                // Extract the translation/correction (first line after a bullet point or number)
+                const firstLine = aiResponse.split('\n').find(line => 
+                    line.trim().startsWith('•') || line.trim().startsWith('-') || /^\d+\./.test(line.trim())
+                );
+                if (firstLine) {
+                    const textToSpeak = firstLine.replace(/^[•\-\d\.\s]+/, '').trim();
+                    setTimeout(() => this.speakText(textToSpeak, targetLanguage), 1000);
+                }
             }
         } catch (error) {
             console.error('Error:', error);

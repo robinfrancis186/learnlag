@@ -95,14 +95,13 @@ select:hover, select:focus {
 }
 
 .language-selector::after {
-    content: '▼';
+    content: '🌐';
     position: absolute;
     right: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--primary-color);
     pointer-events: none;
-    font-size: 0.8rem;
+    font-size: 1.2rem;
 }
 
 .interaction-area {
@@ -165,6 +164,14 @@ select:hover, select:focus {
     color: var(--text-color);
     margin-right: auto;
     border-bottom-left-radius: 4px;
+    white-space: pre-wrap;
+}
+
+.ai-message code {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
 }
 
 .input-container {
@@ -295,6 +302,18 @@ select:hover, select:focus {
 .temporary {
     opacity: 0.7;
     font-style: italic;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 0.7;
+        transform: translateY(0);
+    }
 }
 
 /* Improve button states */
@@ -323,4 +342,86 @@ button:focus, input:focus, select:focus {
 .message:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
+}
+
+/* Message content and actions */
+.message-content {
+    flex: 1;
+    white-space: pre-wrap;
+}
+
+.message-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.action-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.action-button:hover {
+    background-color: var(--primary-light);
+    transform: scale(1.1);
+}
+
+.action-button:active {
+    transform: scale(0.95);
+}
+
+.action-button .material-icons-round {
+    font-size: 18px;
+}
+
+/* Pronunciation guide styling */
+.pronunciation {
+    font-family: 'Arial', sans-serif;
+    color: var(--secondary-color);
+    font-size: 0.9em;
+    margin: 4px 0;
+    font-style: italic;
+}
+
+/* Example usage styling */
+.example {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--secondary-color);
+}
+
+/* Improve mobile experience */
+@media (max-width: 600px) {
+    .message-actions {
+        opacity: 1;
+        margin-top: 6px;
+    }
+    
+    .action-button .material-icons-round {
+        font-size: 16px;
+    }
+    
+    .message {
+        max-width: 95%;
+    }
+}
+
+/* Improve language selector */
+.language-selector select {
+    padding-right: 40px;
 } 
