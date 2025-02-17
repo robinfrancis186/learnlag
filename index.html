@@ -7,7 +7,9 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icons/icon-192x192.png">
-    <meta name="theme-color" content="#4A90E2">
+    <meta name="theme-color" content="#7C3AED">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
@@ -19,24 +21,28 @@
         <main>
             <div class="language-selector">
                 <select id="targetLanguage">
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="it">Italian</option>
+                    <option value="es">🇪🇸 Spanish</option>
+                    <option value="fr">🇫🇷 French</option>
+                    <option value="de">🇩🇪 German</option>
+                    <option value="it">🇮🇹 Italian</option>
                 </select>
             </div>
 
             <div class="interaction-area">
                 <div class="chat-container" id="chatContainer">
-                    <!-- Chat messages will appear here -->
+                    <div class="message ai-message">
+                        Hello! I'm your language learning assistant. Select a language and let's start practicing! 👋
+                    </div>
                 </div>
 
                 <div class="input-container">
-                    <button id="voiceButton" class="voice-button">
-                        <span class="mic-icon">🎤</span>
+                    <button id="voiceButton" class="voice-button" title="Voice Input">
+                        <span class="material-icons-round">mic</span>
                     </button>
-                    <input type="text" id="userInput" placeholder="Type your message...">
-                    <button id="sendButton" class="send-button">Send</button>
+                    <input type="text" id="userInput" placeholder="Type your message or click the mic to speak...">
+                    <button id="sendButton" class="send-button" title="Send Message">
+                        <span class="material-icons-round">send</span>
+                    </button>
                 </div>
             </div>
         </main>

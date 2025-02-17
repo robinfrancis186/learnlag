@@ -6,6 +6,7 @@ class LanguageLearningApp {
         this.initializeElements();
         this.initializeEventListeners();
         this.initializeSpeechRecognition();
+        this.initializeTypingAnimation();
     }
 
     initializeElements() {
@@ -15,14 +16,27 @@ class LanguageLearningApp {
         this.voiceButton = document.getElementById('voiceButton');
         this.targetLanguage = document.getElementById('targetLanguage');
         this.isListening = false;
+        this.isProcessing = false;
     }
 
     initializeEventListeners() {
         this.sendButton.addEventListener('click', () => this.handleUserInput());
         this.voiceButton.addEventListener('click', () => this.toggleVoiceInput());
         this.userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleUserInput();
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.handleUserInput();
+            }
         });
+        this.userInput.addEventListener('input', () => {
+            this.sendButton.style.opacity = this.userInput.value.trim() ? '1' : '0.5';
+        });
+    }
+
+    initializeTypingAnimation() {
+        this.typingIndicator = document.createElement('div');
+        this.typingIndicator.className = 'message ai-message typing-indicator';
+        this.typingIndicator.innerHTML = '<span></span><span></span><span></span>';
     }
 
     initializeSpeechRecognition() {
@@ -30,6 +44,11 @@ class LanguageLearningApp {
             this.recognition = new webkitSpeechRecognition();
             this.recognition.continuous = false;
             this.recognition.interimResults = false;
+
+            this.recognition.onstart = () => {
+                this.voiceButton.classList.add('active');
+                this.addMessage('Listening...', 'ai', true);
+            };
 
             this.recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
@@ -39,7 +58,18 @@ class LanguageLearningApp {
 
             this.recognition.onend = () => {
                 this.isListening = false;
-                this.voiceButton.style.backgroundColor = '';
+                this.voiceButton.classList.remove('active');
+                // Remove the "Listening..." message
+                if (this.chatContainer.lastChild.textContent === 'Listening...') {
+                    this.chatContainer.removeChild(this.chatContainer.lastChild);
+                }
+            };
+
+            this.recognition.onerror = (event) => {
+                if (event.error !== 'no-speech') {
+                    this.addMessage('Error with speech recognition. Please try again.', 'ai');
+                }
+                this.voiceButton.classList.remove('active');
             };
         }
     }
@@ -52,40 +82,59 @@ class LanguageLearningApp {
 
         if (this.isListening) {
             this.recognition.stop();
-            this.isListening = false;
-            this.voiceButton.style.backgroundColor = '';
         } else {
             this.recognition.start();
             this.isListening = true;
-            this.voiceButton.style.backgroundColor = '#ff4444';
         }
     }
 
     async handleUserInput() {
         const userMessage = this.userInput.value.trim();
-        if (!userMessage) return;
+        if (!userMessage || this.isProcessing) return;
 
         this.addMessage(userMessage, 'user');
         this.userInput.value = '';
+        this.sendButton.style.opacity = '0.5';
 
         const targetLang = this.targetLanguage.value;
         await this.getAIResponse(userMessage, targetLang);
     }
 
-    addMessage(text, sender) {
+    addMessage(text, sender, isTemporary = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
+        if (isTemporary) {
+            messageDiv.classList.add('temporary');
+        }
         messageDiv.textContent = text;
         this.chatContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    showTypingIndicator() {
+        this.chatContainer.appendChild(this.typingIndicator);
+        this.scrollToBottom();
+    }
+
+    removeTypingIndicator() {
+        if (this.typingIndicator.parentNode === this.chatContainer) {
+            this.chatContainer.removeChild(this.typingIndicator);
+        }
+    }
+
+    scrollToBottom() {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 
     async getAIResponse(userMessage, targetLanguage) {
         try {
+            this.isProcessing = true;
+            this.showTypingIndicator();
+
             const prompt = `You are a helpful language learning assistant. The user is learning ${targetLanguage}. 
                           Help them practice and learn the language. If they write in English, provide translations 
                           and explanations in ${targetLanguage}. If they write in ${targetLanguage}, correct any 
-                          mistakes and provide feedback in English.
+                          mistakes and provide feedback in English. Keep responses concise and friendly.
                           
                           User message: ${userMessage}`;
 
@@ -109,17 +158,23 @@ class LanguageLearningApp {
 
             const data = await response.json();
             const aiResponse = data.candidates[0].content.parts[0].text;
+            
+            this.removeTypingIndicator();
             this.addMessage(aiResponse, 'ai');
 
             // Text-to-speech for the AI response
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(aiResponse);
                 utterance.lang = this.getLanguageCode(targetLanguage);
+                utterance.rate = 0.9; // Slightly slower for better comprehension
                 speechSynthesis.speak(utterance);
             }
         } catch (error) {
             console.error('Error:', error);
+            this.removeTypingIndicator();
             this.addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+        } finally {
+            this.isProcessing = false;
         }
     }
 
