@@ -11,6 +11,10 @@ class LanguageLearningApp {
         this.initializeUserProgress();
         this.initializeGamification();
         this.checkDailyChallenge();
+        this.initializeLanguages();
+        this.initializeAdaptiveLearning();
+        this.initializeVoiceCoaching();
+        this.initializeFlashcards();
     }
 
     initializeElements() {
@@ -132,23 +136,230 @@ class LanguageLearningApp {
         }
     }
 
+    initializeLanguages() {
+        this.supportedLanguages = {
+            'es': {
+                name: 'Spanish',
+                flag: '🇪🇸',
+                code: 'es-ES',
+                commonPhrases: {
+                    greeting: '¡Hola!',
+                    goodbye: '¡Adiós!',
+                    thanks: '¡Gracias!'
+                },
+                grammarRules: ['Use "ser" for permanent characteristics', 'Use "estar" for temporary states']
+            },
+            'fr': {
+                name: 'French',
+                flag: '🇫🇷',
+                code: 'fr-FR',
+                commonPhrases: {
+                    greeting: 'Bonjour!',
+                    goodbye: 'Au revoir!',
+                    thanks: 'Merci!'
+                },
+                grammarRules: ['Use "être" for states', 'Use "avoir" for possession']
+            },
+            'de': {
+                name: 'German',
+                flag: '🇩🇪',
+                code: 'de-DE',
+                commonPhrases: {
+                    greeting: 'Hallo!',
+                    goodbye: 'Auf Wiedersehen!',
+                    thanks: 'Danke!'
+                },
+                grammarRules: ['Verbs go at the end in dependent clauses', 'Nouns are capitalized']
+            },
+            'it': {
+                name: 'Italian',
+                flag: '🇮🇹',
+                code: 'it-IT',
+                commonPhrases: {
+                    greeting: 'Ciao!',
+                    goodbye: 'Arrivederci!',
+                    thanks: 'Grazie!'
+                },
+                grammarRules: ['Use "essere" for states', 'Use "avere" for possession']
+            }
+        };
+
+        // Update language selector with rich options
+        const selector = document.getElementById('targetLanguage');
+        selector.innerHTML = Object.entries(this.supportedLanguages)
+            .map(([code, lang]) => `
+                <option value="${code}" data-language="${lang.name}">
+                    ${lang.flag} ${lang.name}
+                </option>
+            `).join('');
+    }
+
     async handleUserInput(isVoiceInput = false) {
         const userMessage = this.userInput.value.trim();
         if (!userMessage || this.isProcessing) return;
 
+        const targetLang = this.targetLanguage.value;
+        const sourceLang = await this.detectLanguage(userMessage);
+        
         this.addMessage(userMessage, 'user');
         this.userInput.value = '';
         this.sendButton.style.opacity = '0.5';
 
-        const targetLang = this.targetLanguage.value;
-        const aiResponse = await this.getAIResponse(userMessage, targetLang, isVoiceInput);
+        // If source language is different from target, show original and translation
+        if (sourceLang && sourceLang !== targetLang) {
+            const translation = await this.getSmartTranslation(userMessage, sourceLang, targetLang);
+            if (translation) {
+                this.addTranslationMessage(userMessage, translation, sourceLang, targetLang);
+            }
+        }
+
+        const aiResponse = await this.getAIResponse(userMessage, targetLang, isVoiceInput, sourceLang);
         
-        // Check achievements after each interaction
+        // Generate flashcards from the conversation
+        if (aiResponse) {
+            this.generateFlashcards(userMessage, aiResponse);
+        }
+        
         this.checkAchievements(userMessage, aiResponse, isVoiceInput);
         
-        // Award XP for interaction
-        this.awardXP(10); // Base XP for each interaction
-        if (isVoiceInput) this.awardXP(5); // Bonus XP for voice practice
+        // Award XP
+        this.awardXP(10);
+        if (isVoiceInput) this.awardXP(5);
+    }
+
+    async detectLanguage(text) {
+        try {
+            const prompt = `Detect the language of this text and respond with only the language code (es/fr/de/it/en): "${text}"`;
+            
+            const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const langCode = data.candidates[0].content.parts[0].text.trim().toLowerCase();
+                return langCode;
+            }
+        } catch (error) {
+            console.error('Error detecting language:', error);
+        }
+        return null;
+    }
+
+    async getSmartTranslation(text, sourceLang, targetLang) {
+        try {
+            const sourceLanguage = this.supportedLanguages[sourceLang]?.name || 'English';
+            const targetLanguage = this.supportedLanguages[targetLang].name;
+
+            const prompt = `Translate this ${sourceLanguage} text to ${targetLanguage}:
+                          "${text}"
+                          
+                          Requirements:
+                          1. Maintain the context and meaning
+                          2. Use natural, conversational language
+                          3. Consider cultural nuances
+                          4. If there are idioms, translate the meaning appropriately
+                          5. Preserve any formal/informal tone
+                          
+                          Respond with ONLY the translation.`;
+
+            const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text.trim();
+            }
+        } catch (error) {
+            console.error('Error getting translation:', error);
+        }
+        return null;
+    }
+
+    addTranslationMessage(original, translation, sourceLang, targetLang) {
+        const sourceName = this.supportedLanguages[sourceLang]?.name || 'English';
+        const targetName = this.supportedLanguages[targetLang].name;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', 'ai-message', 'translation-message');
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'translation-content';
+        
+        // Original text
+        const originalDiv = document.createElement('div');
+        originalDiv.className = 'original-text';
+        originalDiv.innerHTML = `<span class="language-label">${sourceName}</span>${original}`;
+        
+        // Arrow indicator
+        const arrowDiv = document.createElement('div');
+        arrowDiv.className = 'translation-arrow';
+        arrowDiv.textContent = '↓';
+        
+        // Translated text
+        const translatedDiv = document.createElement('div');
+        translatedDiv.className = 'translated-text';
+        translatedDiv.innerHTML = `<span class="language-label">${targetName}</span>${translation}`;
+        
+        contentDiv.appendChild(originalDiv);
+        contentDiv.appendChild(arrowDiv);
+        contentDiv.appendChild(translatedDiv);
+        
+        // Add action buttons
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'message-actions';
+        
+        // Listen to original
+        if (sourceLang !== 'en') {
+            const listenOriginalButton = document.createElement('button');
+            listenOriginalButton.className = 'action-button';
+            listenOriginalButton.innerHTML = '<span class="material-icons-round">record_voice_over</span>';
+            listenOriginalButton.title = `Listen in ${sourceName}`;
+            listenOriginalButton.onclick = () => this.speakText(original, sourceLang);
+            actionsDiv.appendChild(listenOriginalButton);
+        }
+        
+        // Listen to translation
+        const listenButton = document.createElement('button');
+        listenButton.className = 'action-button';
+        listenButton.innerHTML = '<span class="material-icons-round">volume_up</span>';
+        listenButton.title = `Listen in ${targetName}`;
+        listenButton.onclick = () => this.speakText(translation, targetLang);
+        
+        // Copy translation
+        const copyButton = document.createElement('button');
+        copyButton.className = 'action-button';
+        copyButton.innerHTML = '<span class="material-icons-round">content_copy</span>';
+        copyButton.title = 'Copy translation';
+        copyButton.onclick = () => {
+            navigator.clipboard.writeText(translation);
+            copyButton.innerHTML = '<span class="material-icons-round">check</span>';
+            setTimeout(() => {
+                copyButton.innerHTML = '<span class="material-icons-round">content_copy</span>';
+            }, 2000);
+        };
+        
+        actionsDiv.appendChild(listenButton);
+        actionsDiv.appendChild(copyButton);
+        
+        messageDiv.appendChild(contentDiv);
+        messageDiv.appendChild(actionsDiv);
+        
+        this.chatContainer.appendChild(messageDiv);
+        this.scrollToBottom();
     }
 
     addMessage(text, sender, isTemporary = false) {
@@ -341,12 +552,11 @@ class LanguageLearningApp {
         this.saveProgress();
     }
 
-    async getAIResponse(userMessage, targetLanguage, isVoiceInput) {
+    async getAIResponse(userMessage, targetLanguage, isVoiceInput, sourceLang) {
         try {
             this.isProcessing = true;
             this.showTypingIndicator();
 
-            // Get user's learning history and progress
             const currentLang = this.targetLanguage.value;
             const langProgress = this.userProgress.languages[currentLang];
             const recentPractice = langProgress.practiceHistory.slice(-5).map(h => h.message);
@@ -354,11 +564,22 @@ class LanguageLearningApp {
                 .filter(([key, value]) => value > 2)
                 .map(([key]) => key);
 
-            const prompt = `You are an adaptive language learning assistant. The user is learning ${targetLanguage}.
+            // Get language-specific context
+            const targetLangInfo = this.supportedLanguages[targetLanguage];
+            const relevantGrammarRules = targetLangInfo.grammarRules.join(', ');
+            const commonPhrases = Object.entries(targetLangInfo.commonPhrases)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ');
+
+            const prompt = `You are an adaptive language learning assistant. The user is learning ${targetLangInfo.name}.
                           User's current level: ${langProgress.level}
                           Recent practice: ${JSON.stringify(recentPractice)}
                           Common mistakes: ${JSON.stringify(commonMistakes)}
                           Learning streak: ${this.userProgress.streak} days
+                          Source language: ${sourceLang === 'en' ? 'English' : this.supportedLanguages[sourceLang]?.name}
+                          
+                          Relevant grammar rules: ${relevantGrammarRules}
+                          Common phrases: ${commonPhrases}
                           
                           ${isVoiceInput ? "The user spoke this message, so please pay special attention to pronunciation feedback." : ""}
                           
@@ -367,19 +588,20 @@ class LanguageLearningApp {
                              - Provide the translation
                              - Add pronunciation guide using IPA
                              - Give a contextual example based on user's level
-                             - Suggest related vocabulary or phrases to expand learning
+                             - Suggest related vocabulary or phrases
+                             - Explain any relevant grammar rules
                           
-                          2. If the message is in ${targetLanguage}:
+                          2. If the message is in ${targetLangInfo.name}:
                              - Identify and correct any mistakes
                              - Provide detailed feedback on grammar and pronunciation
                              - Explain corrections in English
                              - Suggest alternative expressions
                              - If no mistakes, praise and encourage
                           
-                          3. Adaptive Learning:
-                             - If user shows mastery, introduce more complex variations
-                             - If user struggles, provide simpler alternatives
-                             - Reference past corrections if similar mistakes occur
+                          3. Cultural Context:
+                             - Include relevant cultural notes
+                             - Explain idiomatic expressions
+                             - Suggest appropriate usage contexts
                           
                           Format the response clearly with sections and bullet points.
                           Keep the tone encouraging and friendly.
@@ -781,6 +1003,547 @@ class LanguageLearningApp {
             langProgress.level = newLevel;
             this.saveProgress();
             this.addMessage(`🎊 Level Up! You're now at ${newLevel} level!`, 'ai');
+        }
+    }
+
+    initializeAdaptiveLearning() {
+        this.learningPath = {
+            currentModule: null,
+            completedModules: new Set(),
+            skillLevels: {
+                pronunciation: 0,
+                grammar: 0,
+                vocabulary: 0,
+                comprehension: 0
+            },
+            recommendations: [],
+            lastAssessment: null
+        };
+
+        // Load saved learning path
+        const savedPath = localStorage.getItem('learningPath');
+        if (savedPath) {
+            const parsed = JSON.parse(savedPath);
+            this.learningPath = {
+                ...parsed,
+                completedModules: new Set(parsed.completedModules)
+            };
+        }
+    }
+
+    initializeVoiceCoaching() {
+        this.voiceMetrics = {
+            lastRecording: null,
+            pronunciationHistory: [],
+            commonIssues: new Map(),
+            improvements: new Map(),
+            confidenceScores: []
+        };
+
+        // Enhanced speech recognition settings
+        if (this.recognition) {
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            
+            // Add detailed speech analysis
+            this.recognition.onresult = (event) => {
+                const results = Array.from(event.results);
+                const transcript = results[results.length - 1][0].transcript;
+                const confidence = results[results.length - 1][0].confidence;
+                
+                this.userInput.value = transcript;
+                
+                if (results[results.length - 1].isFinal) {
+                    this.lastSpokenText = transcript;
+                    this.analyzeVoiceInput(transcript, confidence);
+                    this.handleUserInput(true);
+                }
+            };
+        }
+    }
+
+    async analyzeVoiceInput(transcript, confidence) {
+        const currentLang = this.targetLanguage.value;
+        const langInfo = this.supportedLanguages[currentLang];
+        
+        // Store voice metrics
+        this.voiceMetrics.confidenceScores.push(confidence);
+        this.voiceMetrics.lastRecording = {
+            text: transcript,
+            timestamp: new Date(),
+            confidence: confidence
+        };
+
+        // Analyze pronunciation patterns
+        const prompt = `Analyze this spoken text in ${langInfo.name}: "${transcript}"
+                       
+                       Previous common issues: ${JSON.stringify([...this.voiceMetrics.commonIssues])}
+                       Speaker's level: ${this.userProgress.languages[currentLang].level}
+                       
+                       Provide detailed analysis of:
+                       1. Pronunciation accuracy
+                       2. Stress patterns
+                       3. Intonation
+                       4. Common pronunciation mistakes
+                       5. Specific sounds that need improvement
+                       
+                       Format the response as JSON with these keys:
+                       {
+                           "accuracyScore": number (0-1),
+                           "issues": string[],
+                           "improvements": string[],
+                           "soundPatterns": string[],
+                           "feedback": string
+                       }`;
+
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const analysis = JSON.parse(data.candidates[0].content.parts[0].text);
+                
+                // Update voice metrics
+                analysis.issues.forEach(issue => {
+                    this.voiceMetrics.commonIssues.set(
+                        issue,
+                        (this.voiceMetrics.commonIssues.get(issue) || 0) + 1
+                    );
+                });
+
+                // Store pronunciation history
+                this.voiceMetrics.pronunciationHistory.push({
+                    text: transcript,
+                    analysis: analysis,
+                    timestamp: new Date()
+                });
+
+                // Limit history size
+                if (this.voiceMetrics.pronunciationHistory.length > 50) {
+                    this.voiceMetrics.pronunciationHistory.shift();
+                }
+
+                // Update learning path based on pronunciation performance
+                this.updateSkillLevel('pronunciation', analysis.accuracyScore);
+                this.generateNextLearningModule();
+
+                // Provide immediate feedback if accuracy is low
+                if (analysis.accuracyScore < 0.7) {
+                    this.addMessage(`🎯 Pronunciation Tip: ${analysis.feedback}`, 'ai');
+                    this.demonstrateCorrectPronunciation(transcript, analysis.soundPatterns);
+                }
+            }
+        } catch (error) {
+            console.error('Error analyzing voice input:', error);
+        }
+    }
+
+    async demonstrateCorrectPronunciation(text, soundPatterns) {
+        // Slow down speech for demonstration
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.8;
+        utterance.lang = this.getLanguageCode(this.targetLanguage.value);
+
+        // Find native speaker voice
+        const voices = this.voices.filter(voice => 
+            voice.lang === utterance.lang && voice.localService
+        );
+        if (voices.length > 0) {
+            utterance.voice = voices[0];
+        }
+
+        // Add emphasis to problematic sounds
+        soundPatterns.forEach(pattern => {
+            text = text.replace(new RegExp(pattern, 'gi'), `<emphasis>${pattern}</emphasis>`);
+        });
+
+        this.addMessage(`🔊 Listen carefully to the correct pronunciation:
+                        ${text}
+                        
+                        Click the speaker icon to hear it again.`, 'ai');
+        
+        this.synth.speak(utterance);
+    }
+
+    updateSkillLevel(skill, score) {
+        // Update skill level with weighted average
+        const currentLevel = this.learningPath.skillLevels[skill];
+        this.learningPath.skillLevels[skill] = (currentLevel * 0.7) + (score * 0.3);
+        
+        // Save progress
+        localStorage.setItem('learningPath', JSON.stringify({
+            ...this.learningPath,
+            completedModules: [...this.learningPath.completedModules]
+        }));
+    }
+
+    async generateNextLearningModule() {
+        const currentLang = this.targetLanguage.value;
+        const langProgress = this.userProgress.languages[currentLang];
+        
+        // Generate personalized learning module
+        const prompt = `Create a personalized learning module based on:
+                       Language: ${this.supportedLanguages[currentLang].name}
+                       Current level: ${langProgress.level}
+                       Skill levels: ${JSON.stringify(this.learningPath.skillLevels)}
+                       Common issues: ${JSON.stringify([...this.voiceMetrics.commonIssues])}
+                       Recent improvements: ${JSON.stringify([...this.voiceMetrics.improvements])}
+                       
+                       Create a focused learning plan that:
+                       1. Addresses the weakest skills
+                       2. Builds on recent improvements
+                       3. Introduces new concepts gradually
+                       4. Includes specific exercises
+                       
+                       Format as JSON with:
+                       {
+                           "focus": string,
+                           "exercises": string[],
+                           "vocabulary": string[],
+                           "grammarPoints": string[],
+                           "pronunciationDrills": string[]
+                       }`;
+
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const module = JSON.parse(data.candidates[0].content.parts[0].text);
+                
+                this.learningPath.currentModule = module;
+                this.learningPath.recommendations = module.exercises;
+                
+                // Suggest next exercise if appropriate
+                if (!this.isProcessing && this.currentSession.interactions > 0) {
+                    this.suggestNextExercise();
+                }
+            }
+        } catch (error) {
+            console.error('Error generating learning module:', error);
+        }
+    }
+
+    async suggestNextExercise() {
+        if (this.learningPath.recommendations.length > 0) {
+            const exercise = this.learningPath.recommendations[0];
+            this.addMessage(`📚 Suggested Exercise: ${exercise}
+                           
+                           This exercise focuses on improving your ${this.learningPath.currentModule.focus}.
+                           Would you like to try it?`, 'ai');
+        }
+    }
+
+    initializeFlashcards() {
+        this.flashcardSystem = {
+            cards: new Map(),
+            queue: [],
+            lastReview: null,
+            stats: {
+                learned: 0,
+                reviewing: 0,
+                mastered: 0
+            }
+        };
+
+        // Load saved flashcards
+        const savedCards = localStorage.getItem('flashcards');
+        if (savedCards) {
+            const parsed = JSON.parse(savedCards);
+            this.flashcardSystem.cards = new Map(parsed.cards);
+            this.flashcardSystem.stats = parsed.stats;
+            this.flashcardSystem.lastReview = new Date(parsed.lastReview);
+        }
+
+        // Schedule flashcard reviews
+        setInterval(() => this.checkForDueCards(), 300000); // Check every 5 minutes
+    }
+
+    async generateFlashcards(text, context) {
+        const currentLang = this.targetLanguage.value;
+        const langInfo = this.supportedLanguages[currentLang];
+        
+        const prompt = `Create flashcards from this ${langInfo.name} text: "${text}"
+                       Context: ${context}
+                       User level: ${this.userProgress.languages[currentLang].level}
+                       
+                       Generate flashcards that include:
+                       1. Vocabulary words and phrases
+                       2. Grammar concepts used
+                       3. Cultural references
+                       4. Common usage examples
+                       
+                       Format as JSON array:
+                       {
+                           "cards": [
+                               {
+                                   "front": string,
+                                   "back": string,
+                                   "type": "vocabulary|grammar|culture|usage",
+                                   "difficulty": number (1-5),
+                                   "examples": string[],
+                                   "notes": string
+                               }
+                           ]
+                       }`;
+
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const flashcards = JSON.parse(data.candidates[0].content.parts[0].text);
+                
+                flashcards.cards.forEach(card => {
+                    this.addFlashcard(card);
+                });
+
+                this.showFlashcardCreationMessage(flashcards.cards.length);
+            }
+        } catch (error) {
+            console.error('Error generating flashcards:', error);
+        }
+    }
+
+    addFlashcard(card) {
+        const cardId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+        
+        this.flashcardSystem.cards.set(cardId, {
+            ...card,
+            id: cardId,
+            created: new Date(),
+            lastReviewed: null,
+            nextReview: new Date(),
+            interval: 0,
+            easeFactor: 2.5,
+            repetitions: 0,
+            status: 'new'
+        });
+
+        this.saveFlashcards();
+        this.updateFlashcardQueue();
+    }
+
+    showFlashcardCreationMessage(count) {
+        this.addMessage(`📚 Created ${count} new flashcards from your conversation!
+                        
+                        Would you like to review them now? Type "review flashcards" or click the button below.`, 'ai');
+        
+        // Add review button
+        const messageDiv = this.chatContainer.lastElementChild;
+        const reviewButton = document.createElement('button');
+        reviewButton.className = 'flashcard-review-button';
+        reviewButton.innerHTML = '🎴 Review Flashcards';
+        reviewButton.onclick = () => this.startFlashcardReview();
+        messageDiv.appendChild(reviewButton);
+    }
+
+    async startFlashcardReview() {
+        if (this.flashcardSystem.queue.length === 0) {
+            this.updateFlashcardQueue();
+        }
+
+        if (this.flashcardSystem.queue.length === 0) {
+            this.addMessage('No flashcards due for review! Check back later.', 'ai');
+            return;
+        }
+
+        const card = this.flashcardSystem.cards.get(this.flashcardSystem.queue[0]);
+        this.showFlashcard(card);
+    }
+
+    showFlashcard(card) {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'flashcard-container';
+        
+        const frontDiv = document.createElement('div');
+        frontDiv.className = 'flashcard front';
+        frontDiv.textContent = card.front;
+        
+        const backDiv = document.createElement('div');
+        backDiv.className = 'flashcard back';
+        backDiv.innerHTML = `
+            <div class="flashcard-content">
+                <div class="answer">${card.back}</div>
+                <div class="examples">
+                    ${card.examples.map(ex => `<div class="example">${ex}</div>`).join('')}
+                </div>
+                <div class="notes">${card.notes}</div>
+            </div>
+        `;
+        
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'flashcard-buttons';
+        buttonsDiv.innerHTML = `
+            <button class="difficulty-button" data-difficulty="1">Again</button>
+            <button class="difficulty-button" data-difficulty="2">Hard</button>
+            <button class="difficulty-button" data-difficulty="3">Good</button>
+            <button class="difficulty-button" data-difficulty="4">Easy</button>
+        `;
+        
+        cardDiv.appendChild(frontDiv);
+        cardDiv.appendChild(backDiv);
+        cardDiv.appendChild(buttonsDiv);
+        
+        // Add flip functionality
+        cardDiv.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('difficulty-button')) {
+                cardDiv.classList.toggle('flipped');
+            }
+        });
+        
+        // Add difficulty button handlers
+        buttonsDiv.querySelectorAll('.difficulty-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const difficulty = parseInt(button.dataset.difficulty);
+                this.processFlashcardResponse(card, difficulty);
+            });
+        });
+        
+        // Add to chat
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message ai-message flashcard-message';
+        messageDiv.appendChild(cardDiv);
+        this.chatContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    processFlashcardResponse(card, difficulty) {
+        // SuperMemo 2 algorithm
+        const oldEase = card.easeFactor;
+        
+        if (difficulty >= 3) { // Correct response
+            if (card.repetitions === 0) {
+                card.interval = 1;
+            } else if (card.repetitions === 1) {
+                card.interval = 6;
+            } else {
+                card.interval = Math.round(card.interval * card.easeFactor);
+            }
+            card.repetitions++;
+        } else { // Incorrect response
+            card.repetitions = 0;
+            card.interval = 1;
+        }
+        
+        // Update ease factor
+        card.easeFactor = Math.max(1.3, oldEase + (0.1 - (5 - difficulty) * (0.08 + (5 - difficulty) * 0.02)));
+        
+        // Calculate next review date
+        card.lastReviewed = new Date();
+        card.nextReview = new Date(Date.now() + card.interval * 24 * 60 * 60 * 1000);
+        
+        // Update status
+        if (card.repetitions >= 5 && card.interval >= 30) {
+            card.status = 'mastered';
+        } else if (card.repetitions > 0) {
+            card.status = 'learning';
+        }
+        
+        this.updateFlashcardStats();
+        this.saveFlashcards();
+        this.updateFlashcardQueue();
+        
+        // Show next card or completion message
+        if (this.flashcardSystem.queue.length > 0) {
+            const nextCard = this.flashcardSystem.cards.get(this.flashcardSystem.queue[0]);
+            setTimeout(() => this.showFlashcard(nextCard), 500);
+        } else {
+            this.showReviewComplete();
+        }
+    }
+
+    updateFlashcardStats() {
+        const stats = {
+            learned: 0,
+            reviewing: 0,
+            mastered: 0
+        };
+        
+        this.flashcardSystem.cards.forEach(card => {
+            if (card.status === 'mastered') {
+                stats.mastered++;
+            } else if (card.status === 'learning') {
+                stats.reviewing++;
+            } else {
+                stats.learned++;
+            }
+        });
+        
+        this.flashcardSystem.stats = stats;
+    }
+
+    updateFlashcardQueue() {
+        const now = new Date();
+        this.flashcardSystem.queue = Array.from(this.flashcardSystem.cards.values())
+            .filter(card => card.nextReview <= now)
+            .sort((a, b) => {
+                if (a.status === 'new' && b.status !== 'new') return -1;
+                if (a.status !== 'new' && b.status === 'new') return 1;
+                return a.nextReview - b.nextReview;
+            })
+            .map(card => card.id);
+    }
+
+    showReviewComplete() {
+        const stats = this.flashcardSystem.stats;
+        this.addMessage(`🎉 Review Complete!
+                        
+                        Your Progress:
+                        ✨ Mastered: ${stats.mastered}
+                        📚 Learning: ${stats.reviewing}
+                        🆕 New: ${stats.learned}
+                        
+                        Keep up the great work! Next review session will be available when cards are due.`, 'ai');
+    }
+
+    saveFlashcards() {
+        localStorage.setItem('flashcards', JSON.stringify({
+            cards: Array.from(this.flashcardSystem.cards.entries()),
+            stats: this.flashcardSystem.stats,
+            lastReview: new Date()
+        }));
+    }
+
+    checkForDueCards() {
+        this.updateFlashcardQueue();
+        const dueCount = this.flashcardSystem.queue.length;
+        
+        if (dueCount > 0) {
+            this.addMessage(`📝 You have ${dueCount} flashcards ready for review!
+                           
+                           Type "review flashcards" or click the button below to start.`, 'ai');
+            
+            const messageDiv = this.chatContainer.lastElementChild;
+            const reviewButton = document.createElement('button');
+            reviewButton.className = 'flashcard-review-button';
+            reviewButton.innerHTML = '🎴 Start Review';
+            reviewButton.onclick = () => this.startFlashcardReview();
+            messageDiv.appendChild(reviewButton);
         }
     }
 }
