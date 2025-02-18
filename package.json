@@ -1,0 +1,9 @@
+{
+  "name": "learnlag-asset-generator",
+  "version": "1.0.0",
+  "description": "Asset generator for LearnLag app",
+  "main": "generate-assets.js",
+  "scripts": {
+    "generate": "node generate-assets.js"
+  }
+} 
